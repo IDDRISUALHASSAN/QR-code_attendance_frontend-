@@ -82,14 +82,19 @@ function ScanQR() {
             {
 
                 scanning && (
-
-                    <Scanner
-
-                        onScan={handleScan}
-
-                        onError={(error)=>console.log(error)}
-
-                    />
+<Scanner
+    constraints={{
+        facingMode: {
+            ideal: "environment",
+        },
+    }}
+    scanDelay={500}
+    onScan={handleScan}
+    onError={(error) => {
+        console.log(error);
+        setMessage(error.message);
+    }}
+/>
 
                 )
 
