@@ -1,0 +1,137 @@
+/* src/styles/Register.css */
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f2f5;
+  padding: 20px;
+}
+
+.register-header {
+  background-color: #1a1a2e;
+  color: white;
+  width: 100%;
+  max-width: 450px;
+  text-align: center;
+  padding: 20px;
+  border-radius: 10px 10px 0 0;
+}
+
+.register-header h2 {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.register-header p {
+  font-size: 13px;
+  color: #a0aec0;
+}
+
+.register-form-container {
+  background-color: white;
+  width: 100%;
+  max-width: 450px;
+  padding: 30px 25px;
+  border-radius: 0 0 10px 10px;
+  border: 1px solid #e2e8f0;
+  border-top: none;
+}
+
+.register-form-container h3 {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1a1a2e;
+  margin-bottom: 5px;
+}
+
+.register-form-container p {
+  font-size: 13px;
+  color: #718096;
+  margin-bottom: 20px;
+}
+
+.error-message {
+  background-color: #fff5f5;
+  color: #c53030;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 15px;
+  border: 1px solid #feb2b2;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  color: #4a5568;
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s;
+  background-color: white;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #2b6cb0;
+}
+
+.register-btn {
+  width: 100%;
+  padding: 13px;
+  background-color: #1a1a2e;
+  color: white;
+  font-size: 15px;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  margin-top: 5px;
+  transition: opacity 0.2s;
+}
+
+.register-btn:hover {
+  opacity: 0.85;
+}
+
+.register-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.register-footer {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.register-footer p {
+  font-size: 13px;
+  color: #718096;
+}
+
+.register-footer span {
+  color: #2b6cb0;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.register-footer span:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,37 @@
+.sidebar{
+
+    width:260px;
+    background:#0d47a1;
+    color:white;
+    min-height:100vh;
+
+}
+
+.logo{
+
+    text-align:center;
+    padding:25px;
+    border-bottom:1px solid rgba(255,255,255,.2);
+
+}
+
+.sidebar ul{
+
+    list-style:none;
+    padding:20px;
+
+}
+
+.sidebar li{
+
+    margin-bottom:18px;
+
+}
+
+.sidebar a{
+
+    color:white;
+    text-decoration:none;
+    font-size:17px;
+
+}

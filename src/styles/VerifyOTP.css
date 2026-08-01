@@ -1,0 +1,157 @@
+/* src/styles/VerifyOTP.css */
+.verify-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f2f5;
+  padding: 20px;
+}
+
+.verify-header {
+  background-color: #1a1a2e;
+  color: white;
+  width: 100%;
+  max-width: 450px;
+  text-align: center;
+  padding: 20px;
+  border-radius: 10px 10px 0 0;
+}
+
+.verify-header h2 {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.verify-header p {
+  font-size: 13px;
+  color: #a0aec0;
+}
+
+.verify-form-container {
+  background-color: white;
+  width: 100%;
+  max-width: 450px;
+  padding: 30px 25px;
+  border-radius: 0 0 10px 10px;
+  border: 1px solid #e2e8f0;
+  border-top: none;
+}
+
+.verify-form-container h3 {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1a1a2e;
+  margin-bottom: 5px;
+}
+
+.verify-form-container p {
+  font-size: 13px;
+  color: #718096;
+  margin-bottom: 20px;
+}
+
+.email-tag {
+  color: #2b6cb0;
+  font-weight: bold;
+}
+
+.error-message {
+  background-color: #fff5f5;
+  color: #c53030;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 15px;
+  border: 1px solid #feb2b2;
+}
+
+.success-message {
+  background-color: #f0fff4;
+  color: #276749;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 15px;
+  border: 1px solid #9ae6b4;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  color: #4a5568;
+  margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 18px;
+  outline: none;
+  text-align: center;
+  letter-spacing: 6px;
+  transition: border 0.2s;
+}
+
+.form-group input:focus {
+  border-color: #2b6cb0;
+}
+
+.verify-btn {
+  width: 100%;
+  padding: 13px;
+  background-color: #1a1a2e;
+  color: white;
+  font-size: 15px;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  margin-top: 5px;
+  transition: opacity 0.2s;
+}
+
+.verify-btn:hover {
+  opacity: 0.85;
+}
+
+.verify-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.verify-footer {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.verify-footer p {
+  font-size: 13px;
+  color: #718096;
+  margin-bottom: 5px;
+}
+
+.verify-footer span {
+  color: #2b6cb0;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.verify-footer span:hover {
+  text-decoration: underline;
+}
+
+.disabled-link {
+  color: #a0aec0;
+  cursor: not-allowed;
+}
