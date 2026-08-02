@@ -14,7 +14,7 @@ import MyCourses from "../pages/lecturer/MyCourses";
 import Courses from "../pages/admin/Courses";
 import AssignCourse from "../pages/admin/AssignCourse";
 import ScanQR from "../pages/student/scanQR";
-
+import AttendanceHistory from "../pages/lecturer/AttendanceHistory";
 
 function AppRoutes() {
   return (
@@ -83,6 +83,16 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+    path="/lecturer/attendance"
+    element={
+        <ProtectedRoute>
+            <AttendanceHistory />
+        </ProtectedRoute>
+    }
+/>
+
+
     </Routes>
   );
 }
