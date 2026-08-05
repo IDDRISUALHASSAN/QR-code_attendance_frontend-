@@ -1,5 +1,4 @@
-import {
-  FaQrcode,
+import { FaQrcode,
   FaUsers,
   FaClipboardCheck,
   FaChartBar,
@@ -7,6 +6,7 @@ import {
 
 import DashboardLayout from "../../layouts/DashboardLayout";
 import DashboardCard from "../../components/DashboardCard";
+
 
 function Dashboard() {
   const user = JSON.parse(localStorage.getItem("user"));

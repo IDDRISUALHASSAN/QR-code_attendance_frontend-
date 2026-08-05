@@ -1,5 +1,4 @@
 import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
 
 function DashboardLayout({
   title,
@@ -12,8 +11,6 @@ function DashboardLayout({
       <Sidebar role={role} />
 
       <div className="dashboard-content">
-
-        <Navbar title={title} />
 
         <div className="dashboard-main">
           {children}

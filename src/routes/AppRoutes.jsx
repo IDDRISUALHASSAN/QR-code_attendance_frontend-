@@ -15,6 +15,10 @@ import Courses from "../pages/admin/Courses";
 import AssignCourse from "../pages/admin/AssignCourse";
 import ScanQR from "../pages/student/scanQR";
 import AttendanceHistory from "../pages/lecturer/AttendanceHistory";
+import AttendanceDetails from "../pages/lecturer/AttendanceDetails";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import Loading from "../components/Loading";
+import Students from "../pages/admin/Students";
 
 function AppRoutes() {
   return (
@@ -88,6 +92,28 @@ function AppRoutes() {
     element={
         <ProtectedRoute>
             <AttendanceHistory />
+        </ProtectedRoute>
+    }
+/>
+      <Route
+    path="/lecturer/attendance/:sessionId"
+    element={
+        <ProtectedRoute>
+            <AttendanceDetails />
+        </ProtectedRoute>
+    }
+/>
+      
+      <Route
+    path="/forgot-password"
+    element={<ForgotPassword />}
+/>
+
+<Route
+    path="/admin/students"
+    element={
+        <ProtectedRoute>
+            <Students />
         </ProtectedRoute>
     }
 />
