@@ -19,6 +19,7 @@ import AttendanceDetails from "../pages/lecturer/AttendanceDetails";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import Loading from "../components/Loading";
 import Students from "../pages/admin/Students";
+import Lecturers from "../pages/admin/Lecturers";
 
 function AppRoutes() {
   return (
@@ -118,6 +119,10 @@ function AppRoutes() {
     }
 />
 
+<Route
+      path="/admin/lecturers"
+      element={<Lecturers />}
+    />
 
     </Routes>
   );
