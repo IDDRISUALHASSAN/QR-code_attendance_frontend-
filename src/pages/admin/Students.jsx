@@ -19,8 +19,11 @@ function Students() {
 
   async function loadStudents() {
     try {
-      const response = await fetch("/api/students");
-
+const response = await fetch("/api/students", {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+});
       if (!response.ok) {
         throw new Error("Failed to fetch students");
       }
@@ -48,17 +51,18 @@ function Students() {
     setEditLoading(true);
 
     const response = await fetch(
-      `/api/students/${editingStudent._id}`,
-      {
-        method: "PUT",
+  `/api/students/${editingStudent._id}`,
+  {
+    method: "PUT",
 
-        headers: {
-          "Content-Type": "application/json",
-        },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`, 
+    },
 
-        body: JSON.stringify(editForm),
-      }
-    );
+    body: JSON.stringify(editForm),
+  }
+);
 
     const data = await response.json();
 
@@ -105,13 +109,16 @@ async function handleDeleteStudent(student) {
   }
 
   try {
-    const response = await fetch(
-      `/api/students/${student._id}`,
-      {
-        method: "DELETE",
-      }
-    );
+   const response = await fetch(
+  `/api/students/${student._id}`,
+  {
+    method: "DELETE",
 
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  }
+);
     const data = await response.json();
 
     if (!response.ok) {

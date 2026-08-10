@@ -19,9 +19,14 @@ function AttendanceHistory() {
 
             const user = JSON.parse(localStorage.getItem("user"));
 
-            const response = await fetch(
-                `/api/attendance/lecturer/${user.id}`
-            );
+                        const response = await fetch(
+                    `/api/attendance/lecturer/${user.id}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                    }
+                );
 
             const data = await response.json();
 

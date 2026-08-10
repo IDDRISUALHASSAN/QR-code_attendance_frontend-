@@ -1,439 +1,459 @@
+/* ================================
+   LECTURERS PAGE
+================================ */
 
 .lecturers-page {
-    width: 100%;
+  width: 100%;
+  padding: 20px;
+  background: #f9fafb;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
+
+/* ================================
+   PAGE HEADER
+================================ */
+
 .page-heading {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
 }
 
 .page-heading h1 {
-    margin: 0;
-    color: #111827;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
 }
 
 .page-heading p {
-    margin-top: 6px;
-    color: #6b7280;
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 15px;
 }
 
 
-/* SEARCH */
+/* ================================
+   SEARCH
+================================ */
 
 .table-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 18px;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 20px;
 }
 
 .table-header input {
-    width: 320px;
-    max-width: 100%;
-    padding: 11px 14px;
-
-    border: 1px solid #d1d5db;
-    border-radius: 9px;
-
-    outline: none;
-    font-size: 14px;
-
-    transition: 0.2s;
+  width: 350px;
+  max-width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  outline: none;
+  font-size: 14px;
+  background: #ffffff;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
 }
 
 .table-header input:focus {
-    border-color: #2563eb;
-
-    box-shadow:
-        0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
 }
 
 
-/* TABLE */
+/* ================================
+   TABLE
+================================ */
 
 .table-container {
-    width: 100%;
-    overflow-x: auto;
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .admin-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .admin-table th {
-    text-align: left;
-    padding: 14px;
-
-    background: #f8fafc;
-
-    color: #374151;
-
-    font-size: 13px;
-    font-weight: 600;
-
-    border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  padding: 14px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .admin-table td {
-    padding: 14px;
-
-    color: #4b5563;
-
-    font-size: 14px;
-
-    border-bottom: 1px solid #f1f5f9;
+  padding: 14px;
+  color: #4b5563;
+  font-size: 14px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .admin-table tbody tr {
-    transition: 0.2s;
+  transition: background 0.25s ease;
 }
 
 .admin-table tbody tr:hover {
-    background: #f8fafc;
+  background: #f9fafb;
 }
 
 
-/* STATUS */
+/* ================================
+   STATUS
+================================ */
 
 .status-active {
-    display: inline-block;
-
-    padding: 5px 10px;
-
-    border-radius: 20px;
-
-    background: #dcfce7;
-
-    color: #15803d;
-
-    font-size: 12px;
-
-    font-weight: 600;
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .status-pending {
-    display: inline-block;
-
-    padding: 5px 10px;
-
-    border-radius: 20px;
-
-    background: #fef3c7;
-
-    color: #b45309;
-
-    font-size: 12px;
-
-    font-weight: 600;
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 
-/* ACTION BUTTONS */
+/* ================================
+   ACTION BUTTONS
+================================ */
 
 .action-buttons {
-    display: flex;
-    gap: 8px;
+  display: flex;
+  gap: 10px;
 }
 
 .action-buttons button {
-    width: 34px;
-    height: 34px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
 
-    border: none;
-    border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    cursor: pointer;
-
-    transition: 0.2s;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
 
 .view-btn {
-    background: #eff6ff;
-    color: #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 .view-btn:hover {
-    background: #dbeafe;
-    transform: translateY(-2px);
+  background: #dbeafe;
+  transform: translateY(-2px);
 }
 
 .edit-btn {
-    background: #fff7ed;
-    color: #ea580c;
+  background: #fff7ed;
+  color: #ea580c;
 }
 
 .edit-btn:hover {
-    background: #ffedd5;
-    transform: translateY(-2px);
+  background: #ffedd5;
+  transform: translateY(-2px);
 }
 
 .delete-btn {
-    background: #fef2f2;
-    color: #dc2626;
+  background: #fef2f2;
+  color: #dc2626;
 }
 
 .delete-btn:hover {
-    background: #fee2e2;
-    transform: translateY(-2px);
+  background: #fee2e2;
+  transform: translateY(-2px);
 }
 
 
-/* EMPTY STATE */
+/* ================================
+   EMPTY STATE
+================================ */
 
 .no-students {
-    text-align: center;
-    padding: 35px !important;
-    color: #6b7280 !important;
+  text-align: center;
+  padding: 40px !important;
+  color: #6b7280 !important;
+  font-size: 15px;
 }
 
 
+/* ==================================================
+   MODAL OVERLAY
+================================================== */
 
 .modal-overlay {
-    position: fixed !important;
+  position: fixed;
+  inset: 0;
 
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
+  background: rgba(15, 23, 42, 0.65);
 
-    width: 100vw !important;
-    height: 100vh !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
-    background: rgba(15, 23, 42, 0.65);
+  padding: 20px;
 
-    display: flex !important;
+  z-index: 9999;
 
-    justify-content: center !important;
-    align-items: center !important;
-
-    padding: 20px;
-
-    box-sizing: border-box;
-
-    z-index: 99999 !important;
-
-    animation: lecturerModalFadeIn 0.25s ease;
+  animation: lecturerModalFadeIn 0.25s ease;
 }
+
+
+/* ==================================================
+   MODAL CARD
+================================================== */
 
 .student-modal {
-    position: relative;
+  width: 520px;
+  max-width: 95%;
 
-    width: 500px;
-    max-width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
 
-    max-height: 90vh;
+  background: #ffffff;
 
-    overflow-y: auto;
+  border-radius: 18px;
 
-    background: white;
+  padding: 30px;
 
-    border-radius: 18px;
+  box-sizing: border-box;
 
-    padding: 30px;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.25);
 
-    box-sizing: border-box;
-
-    box-shadow:
-        0 25px 60px rgba(0, 0, 0, 0.25);
-
-    animation: lecturerModalSlideUp 0.3s ease;
-}
-
-.modal-header {
-    display: flex;
-
-    justify-content: space-between;
-
-    align-items: flex-start;
-
-    margin-bottom: 25px;
-}
-
-.modal-header h2 {
-    margin: 0;
-
-    font-size: 24px;
-
-    color: #111827;
-}
-
-.modal-header p {
-    margin: 6px 0 0;
-
-    color: #6b7280;
-
-    font-size: 14px;
-}
-
-.modal-close-icon {
-    width: 36px;
-    height: 36px;
-
-    border: none;
-
-    border-radius: 50%;
-
-    background: #f3f4f6;
-
-    color: #374151;
-
-    font-size: 24px;
-
-    cursor: pointer;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    transition: 0.2s;
-}
-
-.modal-close-icon:hover {
-    background: #fee2e2;
-
-    color: #dc2626;
-
-    transform: rotate(90deg);
-}
-
-.student-info {
-    display: grid;
-
-    grid-template-columns: 1fr 1fr;
-
-    gap: 15px;
-
-    margin-bottom: 25px;
-}
-
-.info-item {
-    background: #f8fafc;
-
-    border: 1px solid #e5e7eb;
-
-    border-radius: 10px;
-
-    padding: 15px;
-}
-
-.info-item span {
-    display: block;
-
-    margin-bottom: 6px;
-
-    font-size: 12px;
-
-    font-weight: 500;
-
-    color: #6b7280;
-
-    text-transform: uppercase;
-}
-
-.info-item strong {
-    display: block;
-
-    color: #111827;
-
-    font-size: 15px;
-
-    word-break: break-word;
-}
-
-.verified-text {
-    color: #16a34a !important;
-}
-
-.pending-text {
-    color: #d97706 !important;
-}
-
-.close-modal-btn {
-    width: 100%;
-
-    padding: 13px;
-
-    border: none;
-
-    border-radius: 10px;
-
-    background: #2563eb;
-
-    color: white;
-
-    font-size: 15px;
-
-    font-weight: 600;
-
-    cursor: pointer;
-
-    transition: 0.2s;
-}
-
-.close-modal-btn:hover {
-    background: #1d4ed8;
-
-    transform: translateY(-1px);
+  animation: lecturerModalSlideUp 0.3s ease;
 }
 
 
-/* ANIMATION */
+/* ==================================================
+   MODAL TITLE
+================================================== */
+
+.student-modal h2 {
+  margin: 0 0 25px;
+
+  font-size: 25px;
+  font-weight: 700;
+
+  color: #111827;
+}
+
+
+/* ==================================================
+   VIEW MODAL TEXT
+================================================== */
+
+.student-modal p {
+  margin: 0 0 14px;
+
+  padding: 13px 15px;
+
+  background: #f9fafb;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 10px;
+
+  color: #374151;
+
+  font-size: 14px;
+}
+
+.student-modal p:last-of-type {
+  margin-bottom: 25px;
+}
+
+
+/* ==================================================
+   EDIT FORM INPUTS
+================================================== */
+
+.student-modal input {
+  width: 100%;
+
+  padding: 13px 15px;
+
+  margin-bottom: 15px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #d1d5db;
+
+  border-radius: 10px;
+
+  outline: none;
+
+  background: #ffffff;
+
+  color: #111827;
+
+  font-size: 14px;
+
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
+}
+
+.student-modal input::placeholder {
+  color: #9ca3af;
+}
+
+.student-modal input:focus {
+  border-color: #2563eb;
+
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.12);
+
+  transform: translateY(-1px);
+}
+
+
+/* ==================================================
+   MODAL BUTTONS
+================================================== */
+
+.student-modal button {
+  width: 100%;
+
+  padding: 13px 15px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+}
+
+
+/* SAVE BUTTON */
+
+.student-modal button:first-of-type {
+  background: #2563eb;
+  color: #ffffff;
+
+  margin-top: 5px;
+}
+
+.student-modal button:first-of-type:hover {
+  background: #1d4ed8;
+
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 8px 18px rgba(37, 99, 235, 0.25);
+}
+
+
+/* CANCEL / CLOSE BUTTON */
+
+.student-modal button:last-of-type {
+  background: #f3f4f6;
+  color: #374151;
+
+  margin-top: 10px;
+}
+
+.student-modal button:last-of-type:hover {
+  background: #e5e7eb;
+
+  transform: translateY(-1px);
+}
+
+
+/* ==================================================
+   ANIMATIONS
+================================================== */
 
 @keyframes lecturerModalFadeIn {
-    from {
-        opacity: 0;
-    }
+  from {
+    opacity: 0;
+  }
 
-    to {
-        opacity: 1;
-    }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes lecturerModalSlideUp {
-    from {
-        opacity: 0;
+  from {
+    opacity: 0;
 
-        transform:
-            translateY(25px)
-            scale(0.96);
-    }
+    transform:
+      translateY(25px)
+      scale(0.96);
+  }
 
-    to {
-        opacity: 1;
+  to {
+    opacity: 1;
 
-        transform:
-            translateY(0)
-            scale(1);
-    }
+    transform:
+      translateY(0)
+      scale(1);
+  }
 }
 
 
-/* MOBILE */
+/* ==================================================
+   MOBILE
+================================================== */
 
 @media (max-width: 600px) {
 
-    .student-modal {
-        width: 100%;
-        padding: 22px;
-        border-radius: 14px;
-    }
+  .lecturers-page {
+    padding: 15px;
+  }
 
-    .student-info {
-        grid-template-columns: 1fr;
-    }
+  .student-modal {
+    width: 100%;
+    padding: 22px;
+    border-radius: 14px;
+  }
 
-    .table-header input {
-        width: 100%;
-    }
+  .student-modal h2 {
+    font-size: 22px;
+  }
 
+  .table-header input {
+    width: 100%;
+  }
+
+  .action-buttons {
+    gap: 6px;
+  }
+
+  .action-buttons button {
+    width: 34px;
+    height: 34px;
+  }
 }

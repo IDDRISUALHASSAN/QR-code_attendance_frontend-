@@ -20,6 +20,10 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import Loading from "../components/Loading";
 import Students from "../pages/admin/Students";
 import Lecturers from "../pages/admin/Lecturers";
+import Reports from "../pages/admin/Reports";
+import Attendance from "../pages/student/Attendance";
+import Profile from "../pages/student/Profile";
+import LecturerProfile from "../pages/lecturer/Profile";
 
 function AppRoutes() {
   return (
@@ -123,6 +127,25 @@ function AppRoutes() {
       path="/admin/lecturers"
       element={<Lecturers />}
     />
+
+    <Route
+  path="/admin/reports"
+  element={<Reports />}
+/>
+
+<Route
+  path="/student/history"
+  element={<Attendance />}
+/>
+<Route
+  path="/student/profile"
+  element={<Profile />}
+/>
+
+<Route
+  path="/lecturer/profile"
+  element={<LecturerProfile />}
+/>
 
     </Routes>
   );
