@@ -75,7 +75,7 @@ function AttendanceDetails() {
             </thead>
             <tbody>
               {filteredAttendance.map((record) => (
-                <tr key={record._id}>
+                <tr key={record.id}>
                   <td>{record.student?.name || "N/A"}</td>
                         <td>{record.student?.indexNumber || "N/A"}</td>
                         <td>{record.student?.email || "N/A"}</td>

@@ -105,7 +105,7 @@ function Attendance() {
 
                 {attendance.map((record) => (
 
-                  <tr key={record._id}>
+                  <tr key={record.id}>
 
                     <td className="course-name">
                       {record.course?.courseName || "N/A"}
