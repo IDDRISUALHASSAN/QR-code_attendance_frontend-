@@ -19,7 +19,15 @@ function AttendanceDetails() {
 
   async function loadAttendance() {
     try {
-      const response = await fetch(`${API_URL}/api/attendance/session/${sessionId}`);
+      const response = await fetch(`${API_URL}/api/attendance/session/${sessionId}`, {
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+});
+
+
+
       const data = await response.json();
       setAttendance(data.attendance || []);
     } catch (error) {
