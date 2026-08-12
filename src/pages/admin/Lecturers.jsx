@@ -1,9 +1,11 @@
-// src/pages/admin/Lecturers.jsx
+
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import "../../styles/adminLecturers.css";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import API_URL from "../../config/api";
+
 
 function Lecturers() {
   const [lecturers, setLecturers] = useState([]);
@@ -21,9 +23,7 @@ function Lecturers() {
 
   const [loading, setLoading] = useState(true);
 
-  // ========================================
-  // LOAD LECTURERS
-  // ========================================
+  
 
   useEffect(() => {
     loadLecturers();
@@ -35,7 +35,7 @@ function Lecturers() {
 
       const token = localStorage.getItem("token");
 
-      const response = await fetch("/api/lecturers", {
+      const response = await fetch(`${API_URL}/api/lecturers`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -59,10 +59,7 @@ function Lecturers() {
     }
   }
 
-  // ========================================
-  // OPEN EDIT MODAL
-  // ========================================
-
+ 
   function handleEdit(lecturer) {
     setEditingLecturer(lecturer);
 
@@ -74,9 +71,6 @@ function Lecturers() {
     });
   }
 
-  // ========================================
-  // UPDATE LECTURER
-  // ========================================
 
   async function updateLecturer() {
     if (!editingLecturer) return;
@@ -85,7 +79,7 @@ function Lecturers() {
       const token = localStorage.getItem("token");
 
       const response = await fetch(
-        `/api/lecturers/${editingLecturer._id}`,
+        `${API_URL}/api/lecturers/${editingLecturer._id}`,
         {
           method: "PUT",
 
@@ -121,9 +115,7 @@ function Lecturers() {
     }
   }
 
-  // ========================================
-  // DELETE LECTURER
-  // ========================================
+  
 
   async function deleteLecturer(id) {
     const confirmed = window.confirm(
@@ -136,7 +128,7 @@ function Lecturers() {
       const token = localStorage.getItem("token");
 
       const response = await fetch(
-        `/api/lecturers/${id}`,
+        `${API_URL}/api/lecturers/${id}`,
         {
           method: "DELETE",
 
@@ -156,8 +148,7 @@ function Lecturers() {
 
       await loadLecturers();
 
-      // Close view modal if the deleted lecturer
-      // was currently being viewed.
+     
       if (
         selectedLecturer &&
         selectedLecturer._id === id
@@ -176,9 +167,7 @@ function Lecturers() {
     }
   }
 
-  // ========================================
-  // SEARCH
-  // ========================================
+  
 
   const filteredLecturers = lecturers.filter(
     (lecturer) =>
@@ -196,10 +185,7 @@ function Lecturers() {
         .includes(search.toLowerCase())
   );
 
-  // ========================================
-  // UI
-  // ========================================
-
+ 
   return (
     <DashboardLayout
       title="Lecturers"

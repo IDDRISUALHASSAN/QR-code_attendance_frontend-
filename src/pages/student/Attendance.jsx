@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import "../../styles/studentAttendance.css";
-
+import API_URL from "../../config/api";
 function Attendance() {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,7 @@ function Attendance() {
   async function loadAttendance() {
     try {
       const response = await fetch(
-  `/api/attendance/student/${user.id}`,
+  `${API_URL}/api/attendance/student/${user.id}`,
   {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,

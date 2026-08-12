@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { Scanner } from "@yudiel/react-qr-scanner";
 
+
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
+import API_URL from "../../config/api";
+
+
 
 function ScanQR() {
 
@@ -23,7 +27,7 @@ function ScanQR() {
 
             const response =
                 await fetch(
-                    "/api/attendance/scan",
+                    `${API_URL}/api/attendance/scan`,
                     {
 
                         method: "POST",

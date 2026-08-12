@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../styles/VerifyOTP.css";
+import API_URL from "../config/api";
 
 const VerifyOTP = () => {
   const location = useLocation();
@@ -14,6 +15,7 @@ const VerifyOTP = () => {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -21,7 +23,7 @@ const VerifyOTP = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/verify-email", {
+      const response = await fetch(`${API_URL}/api/auth/verify-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -55,7 +57,7 @@ const VerifyOTP = () => {
     setResendLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/resend-otp", {
+      const response = await fetch(`${API_URL}/api/auth/resend-otp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

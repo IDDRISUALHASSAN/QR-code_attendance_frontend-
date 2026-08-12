@@ -11,19 +11,18 @@ function Reports() {
   const [dateFilter, setDateFilter] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  
 
   useEffect(() => {
     loadAttendance();
   }, []);
 
-  // =========================
-  // LOAD ATTENDANCE
-  // =========================
+  
   async function loadAttendance() {
     try {
       setLoading(true);
 
-      const response = await fetch("/api/attendance/report");
+      const response = await fetch(`${API_URL}/api/attendance/report`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch attendance report");
@@ -40,9 +39,6 @@ function Reports() {
     }
   }
 
-  // =========================
-  // FORMAT DATE
-  // =========================
   function formatDate(date) {
     if (!date) return "N/A";
 
@@ -55,9 +51,6 @@ function Reports() {
     return parsedDate.toLocaleDateString();
   }
 
-  // =========================
-  // FORMAT TIME
-  // =========================
   function formatTime(date) {
     if (!date) return "N/A";
 
@@ -73,9 +66,6 @@ function Reports() {
     });
   }
 
-  // =========================
-  // DATE FOR FILTER
-  // =========================
   function getLocalDateString(date) {
     if (!date) return "";
 
@@ -92,9 +82,6 @@ function Reports() {
     return `${year}-${month}-${day}`;
   }
 
-  // =========================
-  // FILTER ATTENDANCE
-  // =========================
   const filteredAttendance = attendance.filter((record) => {
     const searchValue = search.trim().toLowerCase();
 
@@ -143,9 +130,6 @@ function Reports() {
     );
   });
 
-  // =========================
-  // REPORT STATISTICS
-  // =========================
   const totalRecords = attendance.length;
 
   const today = new Date();
@@ -169,9 +153,7 @@ function Reports() {
       .map((record) => record.course._id)
   ).size;
 
-  // =========================
-  // CLEAR FILTERS
-  // =========================
+
   function clearFilters() {
     setSearch("");
     setDateFilter("");
@@ -179,9 +161,6 @@ function Reports() {
     setStatusFilter("");
   }
 
-  // =========================
-  // EXPORT PDF
-  // =========================
   function exportPDF() {
     if (filteredAttendance.length === 0) {
       alert("There are no attendance records to export.");

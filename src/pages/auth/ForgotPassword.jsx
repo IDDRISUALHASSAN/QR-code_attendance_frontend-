@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../styles/forgotPassword.css";
+import API_URL from "../../config/api";
 
 function ForgotPassword() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/forgot-password", {
+      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -26,7 +27,7 @@ function ForgotPassword() {
       }
 
       alert(data.message);
-      navigate("/verify-reset-code", { state: { email } });
+      navigate(`${API_URL}/verify-reset-code`, { state: { email } });
     } catch (error) {
       console.error(error);
       alert("Something went wrong.");

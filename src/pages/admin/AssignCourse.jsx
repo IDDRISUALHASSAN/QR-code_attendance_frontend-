@@ -5,6 +5,7 @@ import PageHeader from "../../components/PageHeader";
 import Loading from "../../components/Loading";
 
 import "../../styles/assignCourse.css";
+import API_URL from "../../config/api";
 
 function AssignCourse() {
 
@@ -32,7 +33,7 @@ function AssignCourse() {
         try {
 
             const lecturerResponse =
-                await fetch("/api/users/lecturers");
+                await fetch(`${API_URL}/api/users/lecturers`);
 
             const lecturerData =
                 await lecturerResponse.json();
@@ -40,7 +41,7 @@ function AssignCourse() {
             setLecturers(lecturerData.lecturers);
 
             const courseResponse =
-                await fetch("/api/courses");
+                await fetch(`${API_URL}/api/courses`);
 
             const courseData =
                 await courseResponse.json();
@@ -48,7 +49,7 @@ function AssignCourse() {
             setCourses(courseData.courses);
 
             const assignmentResponse =
-                await fetch("/api/course-assignments");
+                await fetch(`${API_URL}/api/course-assignments`);
 
             const assignmentData =
                 await assignmentResponse.json();
@@ -74,7 +75,7 @@ function AssignCourse() {
         try {
 
             const response = await fetch(
-                "/api/course-assignments",
+                `${API_URL}/api/course-assignments`,
                 {
                     method: "POST",
 

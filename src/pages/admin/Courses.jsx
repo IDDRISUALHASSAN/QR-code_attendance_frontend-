@@ -9,7 +9,7 @@ import {
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
 import Loading from "../../components/Loading";
-
+import API_URL from "../../config/api";
 import "../../styles/courses.css";
 
 function Courses() {
@@ -30,7 +30,7 @@ function Courses() {
     try {
       setLoading(true);
 
-      const response = await fetch("/api/courses");
+      const response = await fetch(`${API_URL}/api/courses`);
 
       const data = await response.json();
 
@@ -76,8 +76,8 @@ function Courses() {
       };
 
       const url = editingId
-        ? `/api/courses/${editingId}`
-        : "/api/courses";
+        ? `${API_URL}/api/courses/${editingId}`
+        : `${API_URL}/api/courses`;
 
       const method = editingId
         ? "PUT"
@@ -141,7 +141,7 @@ function Courses() {
 
     try {
       const response = await fetch(
-        `/api/courses/${id}`,
+        `${API_URL}/api/courses/${id}`,
         {
           method: "DELETE",
         }

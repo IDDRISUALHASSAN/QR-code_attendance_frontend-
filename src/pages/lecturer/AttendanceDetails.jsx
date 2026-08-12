@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
 import "../../styles/attendanceDetails.css";
+import API_URL from "../../config/api";
 
 function AttendanceDetails() {
   const { sessionId } = useParams();
@@ -18,7 +19,7 @@ function AttendanceDetails() {
 
   async function loadAttendance() {
     try {
-      const response = await fetch(`/api/attendance/session/${sessionId}`);
+      const response = await fetch(`${API_URL}/api/attendance/session/${sessionId}`);
       const data = await response.json();
       setAttendance(data.attendance || []);
     } catch (error) {
@@ -29,11 +30,15 @@ function AttendanceDetails() {
   }
 
   // Filter attendance based on search
-  const filteredAttendance = attendance.filter(
-    (record) =>
-      record.student.name.toLowerCase().includes(search.toLowerCase()) ||
-      record.student.indexNumber.toLowerCase().includes(search.toLowerCase())
-  );
+                    const filteredAttendance = attendance.filter((record) => {
+            const name = record.student?.name?.toLowerCase() || "";
+            const indexNumber = record.student?.indexNumber?.toLowerCase() || "";
+
+            return (
+              name.includes(search.toLowerCase()) ||
+              indexNumber.includes(search.toLowerCase())
+            );
+          });
 
   return (
     <DashboardLayout title="Attendance Details" role="lecturer">
@@ -57,7 +62,7 @@ function AttendanceDetails() {
             className="search-input"
           />
 
-          {/* Attendance table */}
+         
           <table className="attendance-table">
             <thead>
               <tr>
@@ -71,9 +76,9 @@ function AttendanceDetails() {
             <tbody>
               {filteredAttendance.map((record) => (
                 <tr key={record._id}>
-                  <td>{record.student.name}</td>
-                  <td>{record.student.indexNumber}</td>
-                  <td>{record.student.email}</td>
+                  <td>{record.student?.name || "N/A"}</td>
+                        <td>{record.student?.indexNumber || "N/A"}</td>
+                        <td>{record.student?.email || "N/A"}</td>
                   <td>
                     <span
                       className={

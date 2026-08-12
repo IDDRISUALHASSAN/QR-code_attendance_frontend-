@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
+import API_URL from "../../config/api";
 
 function AttendanceHistory() {
 
@@ -20,7 +21,7 @@ function AttendanceHistory() {
             const user = JSON.parse(localStorage.getItem("user"));
 
                         const response = await fetch(
-                    `/api/attendance/lecturer/${user.id}`,
+                    `${API_URL}/api/attendance/lecturer/${user.id}`,
                     {
                         headers: {
                             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -120,11 +121,11 @@ function AttendanceHistory() {
 
                                     <td>
 
-                                        <Link
-                                            to={`/lecturer/attendance/${session._id}`}
-                                        >
-                                            View
-                                        </Link>
+                                                                        <Link
+                                    to={`/lecturer/attendance/${session.id}`}
+                                >
+                                    View
+                                </Link>
 
                                     </td>
 

@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
 import DashboardCard from "../../components/DashboardCard";
-
+import API_URL from "../../config/api";
 function Dashboard() {
 
     const [stats, setStats] = useState({
@@ -22,7 +22,7 @@ function Dashboard() {
 
         try {
 
-            const response = await fetch("/api/dashboard/admin");
+            const response = await fetch(`${API_URL}/api/dashboard/admin`);
 
             const data = await response.json();
 

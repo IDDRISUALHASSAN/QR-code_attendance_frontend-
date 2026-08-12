@@ -6,6 +6,7 @@ import PageHeader from "../../components/PageHeader";
 import Loading from "../../components/Loading";
 
 import "../../styles/myCourses.css";
+import API_URL from "../../config/api";
 
 function MyCourses() {
 
@@ -45,7 +46,7 @@ function MyCourses() {
 
             const response =
                 await fetch(
-                    `/api/course-assignments/lecturer/${user.id}`
+                    `${API_URL}/api/course-assignments/lecturer/${user.id}`
                 );
 
             const data =
@@ -69,7 +70,7 @@ function MyCourses() {
 
             const response =
                 await fetch(
-                    "/api/attendance-sessions/start",
+                    `${API_URL}/api/attendance-sessions/start`,
                     {
 
                         method: "POST",

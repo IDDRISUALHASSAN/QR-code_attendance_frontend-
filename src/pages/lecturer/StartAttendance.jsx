@@ -4,6 +4,9 @@ import QRCode from "qrcode";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
+import API_URL from "../../config/api";
+
+
 
 import "../../styles/generateQR.css";
 
@@ -60,7 +63,7 @@ function StartAttendance() {
   async function loadCourses() {
     try {
       const user = JSON.parse(localStorage.getItem("user"));
-      const response = await fetch(`/api/course-assignments/lecturer/${user.id}`);
+      const response = await fetch(`${API_URL}/api/course-assignments/lecturer/${user.id}`);
       const data = await response.json();
       setCourses(data.assignments || []);
     } catch (error) {
@@ -79,7 +82,7 @@ function StartAttendance() {
     }
 
     try {
-      const response = await fetch("/api/attendance-sessions/start", {
+      const response = await fetch(`${API_URL}/api/attendance-sessions/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ courseAssignmentId: selectedCourse, duration }),
@@ -101,7 +104,7 @@ function StartAttendance() {
 
   async function stopAttendance() {
     try {
-      const response = await fetch(`/api/attendance-sessions/close/${session._id}`, {
+      const response = await fetch(`${API_URL}/api/attendance-sessions/close/${session._id}`, {
         method: "PUT",
       });
 
@@ -183,7 +186,7 @@ function StartAttendance() {
               </div>
             )}
 
-            {/* Action button */}
+            
             {session ? (
               <button type="button" className="generate-qr-btn" onClick={stopAttendance}>
                 Stop Attendance

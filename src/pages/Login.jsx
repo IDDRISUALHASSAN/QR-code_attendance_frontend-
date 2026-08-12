@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import "../styles/Login.css";
+import API_URL from "../config/api";
+
+
+
 
 function Login() {
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
 
   const selectedRole = location.state?.role || "Student";
 
@@ -29,7 +34,7 @@ const handleSubmit = async (e) => {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

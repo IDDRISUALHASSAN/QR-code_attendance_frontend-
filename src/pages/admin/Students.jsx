@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import "../../styles/adminStudents.css";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import API_URL from "../../config/api";
 
 function Students() {
   const [students, setStudents] = useState([]);
@@ -19,7 +20,7 @@ function Students() {
 
   async function loadStudents() {
     try {
-const response = await fetch("/api/students", {
+const response = await fetch("${API_URL}/api/students", {
   headers: {
     Authorization: `Bearer ${localStorage.getItem("token")}`,
   },
@@ -51,7 +52,7 @@ const response = await fetch("/api/students", {
     setEditLoading(true);
 
     const response = await fetch(
-  `/api/students/${editingStudent._id}`,
+  `${API_URL}/api/students/${editingStudent._id}`,
   {
     method: "PUT",
 
@@ -110,7 +111,7 @@ async function handleDeleteStudent(student) {
 
   try {
    const response = await fetch(
-  `/api/students/${student._id}`,
+  `${API_URL}/api/students/${student._id}`,
   {
     method: "DELETE",
 
