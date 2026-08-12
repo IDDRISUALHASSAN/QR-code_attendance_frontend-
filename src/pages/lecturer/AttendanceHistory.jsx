@@ -121,11 +121,12 @@ function AttendanceHistory() {
 
                                     <td>
 
-                                                                        <Link
-                                    to={`/lecturer/attendance/${session.id}`}
-                                >
-                                    View
-                                </Link>
+                                                                    <Link
+    to={`/lecturer/attendance/${session._id}`}
+>
+    View
+</Link>
+                            
 
                                     </td>
 
