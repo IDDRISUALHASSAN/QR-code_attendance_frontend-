@@ -13,7 +13,7 @@ import StartAttendance from "../pages/lecturer/StartAttendance";
 import MyCourses from "../pages/lecturer/MyCourses";
 import Courses from "../pages/admin/Courses";
 import AssignCourse from "../pages/admin/AssignCourse";
-import ScanQR from "../pages/student/scanQR";
+import ScanQR from "../pages/student/ScanQR";
 import AttendanceHistory from "../pages/lecturer/AttendanceHistory";
 import AttendanceDetails from "../pages/lecturer/AttendanceDetails";
 import ForgotPassword from "../pages/auth/ForgotPassword";
