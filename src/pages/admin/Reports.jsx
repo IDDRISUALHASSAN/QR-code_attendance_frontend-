@@ -3,6 +3,8 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 import "../../styles/adminReports.css";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
+import API_URL from "../../config/api";
+
 
 function Reports() {
   const [attendance, setAttendance] = useState([]);
@@ -22,7 +24,12 @@ function Reports() {
     try {
       setLoading(true);
 
-      const response = await fetch(`${API_URL}/api/attendance/report`);
+      const response = await fetch(`${API_URL}/api/attendance/report`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
 
       if (!response.ok) {
         throw new Error("Failed to fetch attendance report");
