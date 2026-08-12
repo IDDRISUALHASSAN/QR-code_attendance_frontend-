@@ -20,7 +20,7 @@ function Students() {
 
   async function loadStudents() {
     try {
-const response = await fetch("${API_URL}/api/students", {
+const response = await fetch(`${API_URL}/api/students`, {
   headers: {
     Authorization: `Bearer ${localStorage.getItem("token")}`,
   },
