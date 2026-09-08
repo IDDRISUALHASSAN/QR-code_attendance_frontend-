@@ -24,6 +24,9 @@ import Reports from "../pages/admin/Reports";
 import Attendance from "../pages/student/Attendance";
 import Profile from "../pages/student/Profile";
 import LecturerProfile from "../pages/lecturer/Profile";
+import AddStudent from "../pages/admin/AddStudent";
+import AddLecturer from "../pages/admin/AddLecturer";
+
 
 function AppRoutes() {
   return (
@@ -140,6 +143,23 @@ function AppRoutes() {
 <Route
   path="/student/profile"
   element={<Profile />}
+/>
+<Route
+  path="/admin/add-student"
+  element={
+    <ProtectedRoute>
+      <AddStudent />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/admin/add-lecturer"
+  element={
+    <ProtectedRoute>
+      <AddLecturer />
+    </ProtectedRoute>
+  }
 />
 
 <Route
