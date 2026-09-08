@@ -1,4 +1,4 @@
-/* src/styles/Home.css */
+
 * {
   margin: 0;
   padding: 0;
@@ -6,102 +6,635 @@
 }
 
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f0f2f5;
+  font-family:
+    Inter,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
+  background: #07111f;
 }
+
+/* =========================
+   MAIN CONTAINER
+   ========================= */
 
 .home-container {
   min-height: 100vh;
+  width: 100%;
+  position: relative;
+
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+
+  padding: 40px 20px;
+
+  overflow: hidden;
 }
+
+/* =========================
+   BACKGROUND IMAGE
+   ========================= */
+
+.home-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.home-background img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  object-position: center;
+
+  animation: backgroundZoom 18s ease-in-out infinite alternate;
+}
+
+.home-background-overlay {
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(5, 15, 30, 0.92) 0%,
+      rgba(5, 15, 30, 0.72) 45%,
+      rgba(5, 15, 30, 0.48) 100%
+    );
+}
+
+/* =========================
+   MAIN CONTENT
+   ========================= */
+
+.home-content {
+  width: 100%;
+  max-width: 570px;
+
+  position: relative;
+  z-index: 2;
+
+  padding: 28px;
+
+  border-radius: 24px;
+
+  background: rgba(255, 255, 255, 0.11);
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  animation: contentAppear 0.8s ease;
+}
+
+/* =========================
+   HEADER
+   ========================= */
 
 .home-header {
-  background-color: #1a1a2e;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding-bottom: 24px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.home-logo {
+  flex-shrink: 0;
+}
+
+.home-logo-icon {
+  width: 52px;
+  height: 52px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 15px;
+
+  background: rgba(255, 255, 255, 0.16);
+
+  border: 1px solid rgba(255, 255, 255, 0.22);
+
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.home-logo-icon span {
+  width: 31px;
+  height: 31px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: white;
+
+  color: #1d4ed8;
+
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.home-header-text {
+  flex: 1;
+}
+
+.home-header-text h2 {
   color: white;
-  width: 100%;
-  max-width: 450px;
-  text-align: center;
-  padding: 20px;
-  border-radius: 10px 10px 0 0;
+
+  font-size: 17px;
+  font-weight: 800;
+
+  letter-spacing: 0.8px;
 }
 
-.home-header h2 {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 5px;
+.home-header-text p {
+  margin-top: 5px;
+
+  color: rgba(255, 255, 255, 0.65);
+
+  font-size: 12px;
 }
 
-.home-header p {
-  font-size: 14px;
-  color: #a0aec0;
+.home-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 7px 10px;
+
+  border-radius: 30px;
+
+  background: rgba(255, 255, 255, 0.09);
+
+  color: rgba(255, 255, 255, 0.8);
+
+  font-size: 10px;
+  font-weight: 600;
+
+  white-space: nowrap;
 }
+
+.home-status span {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #4ade80;
+
+  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.12);
+
+  animation: statusPulse 2s infinite;
+}
+
+/* =========================
+   WELCOME
+   ========================= */
 
 .home-welcome {
-  background-color: white;
-  width: 100%;
-  max-width: 450px;
+  padding: 32px 8px 26px;
+
   text-align: center;
-  padding: 20px;
-  border-left: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
+}
+
+.welcome-badge {
+  display: inline-block;
+
+  margin-bottom: 13px;
+
+  padding: 7px 12px;
+
+  border-radius: 30px;
+
+  background: rgba(255, 255, 255, 0.1);
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+
+  color: rgba(255, 255, 255, 0.78);
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 1.5px;
 }
 
 .home-welcome h3 {
-  font-size: 22px;
-  font-weight: bold;
-  color: #1a1a2e;
-  margin-bottom: 5px;
+  color: white;
+
+  font-size: 31px;
+  line-height: 1.2;
+
+  font-weight: 800;
+
+  margin-bottom: 10px;
+}
+
+.home-welcome h3 span {
+  color: #93c5fd;
 }
 
 .home-welcome p {
-  font-size: 14px;
-  color: #718096;
+  max-width: 430px;
+
+  margin: auto;
+
+  color: rgba(255, 255, 255, 0.7);
+
+  font-size: 13px;
+  line-height: 1.7;
 }
 
+/* =========================
+   ROLE BUTTONS
+   ========================= */
+
 .home-buttons {
-  background-color: white;
-  width: 100%;
-  max-width: 450px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  padding: 25px 20px;
-  border-radius: 0 0 10px 10px;
-  border: 1px solid #e2e8f0;
-  border-top: none;
+  gap: 11px;
 }
 
 .role-btn {
   width: 100%;
-  padding: 15px;
-  font-size: 16px;
-  font-weight: bold;
-  border: none;
-  border-radius: 8px;
+  min-height: 74px;
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 12px 14px;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  border-radius: 16px;
+
   cursor: pointer;
-  transition: opacity 0.2s;
-  letter-spacing: 1px;
+
+  text-align: left;
+
+  color: white;
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .role-btn:hover {
-  opacity: 0.9;
+  transform: translateY(-3px) scale(1.01);
+
+  border-color: rgba(255, 255, 255, 0.3);
 }
+
+.role-btn:active {
+  transform: scale(0.99);
+}
+
+/* Student */
 
 .student-btn {
-  background-color: #2b6cb0;
-  color: white;
+  background: linear-gradient(
+    135deg,
+    rgba(37, 99, 235, 0.92),
+    rgba(29, 78, 216, 0.85)
+  );
+
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.2);
 }
+
+.student-btn:hover {
+  box-shadow: 0 18px 35px rgba(37, 99, 235, 0.3);
+}
+
+/* Lecturer */
 
 .lecturer-btn {
-  background-color: #276749;
-  color: white;
+  background: linear-gradient(
+    135deg,
+    rgba(5, 150, 105, 0.92),
+    rgba(4, 120, 87, 0.85)
+  );
+
+  box-shadow: 0 12px 30px rgba(5, 150, 105, 0.18);
 }
 
+.lecturer-btn:hover {
+  box-shadow: 0 18px 35px rgba(5, 150, 105, 0.28);
+}
+
+/* Admin */
+
 .admin-btn {
-  background-color: #c53030;
+  background: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.92),
+    rgba(109, 40, 217, 0.85)
+  );
+
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.18);
+}
+
+.admin-btn:hover {
+  box-shadow: 0 18px 35px rgba(124, 58, 237, 0.28);
+}
+
+/* =========================
+   ROLE ICON
+   ========================= */
+
+.role-icon {
+  width: 46px;
+  height: 46px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 13px;
+
+  background: rgba(255, 255, 255, 0.14);
+
+  font-size: 21px;
+}
+
+/* =========================
+   ROLE TEXT
+   ========================= */
+
+.role-text {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.role-text strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.role-text small {
+  color: rgba(255, 255, 255, 0.72);
+
+  font-size: 10px;
+}
+
+/* =========================
+   ARROW
+   ========================= */
+
+.role-arrow {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.12);
+
+  font-size: 18px;
+
+  transition: transform 0.25s ease;
+}
+
+.role-btn:hover .role-arrow {
+  transform: translateX(5px);
+}
+
+/* =========================
+   REGISTER
+   ========================= */
+
+.register-link {
+  margin-top: 22px;
+
+  text-align: center;
+
+  color: rgba(255, 255, 255, 0.65);
+
+  font-size: 12px;
+}
+
+.register-link span {
+  color: #bfdbfe;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
+}
+
+.register-link span:hover {
   color: white;
+
+  text-shadow: 0 0 15px rgba(191, 219, 254, 0.6);
+
+  text-decoration: underline;
+}
+
+/* =========================
+   FOOTER
+   ========================= */
+
+.home-footer {
+  position: absolute;
+
+  bottom: 14px;
+
+  left: 0;
+  right: 0;
+
+  z-index: 3;
+
+  text-align: center;
+
+  color: rgba(255, 255, 255, 0.5);
+
+  font-size: 10px;
+}
+
+/* =========================
+   ANIMATIONS
+   ========================= */
+
+@keyframes contentAppear {
+  from {
+    opacity: 0;
+    transform: translateY(25px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes backgroundZoom {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes statusPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.35);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(74, 222, 128, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+/* =========================
+   TABLET
+   ========================= */
+
+@media (max-width: 650px) {
+  .home-container {
+    padding: 25px 15px;
+  }
+
+  .home-content {
+    padding: 22px;
+
+    border-radius: 20px;
+  }
+
+  .home-header {
+    padding-bottom: 20px;
+  }
+
+  .home-status {
+    display: none;
+  }
+
+  .home-welcome {
+    padding: 27px 4px 23px;
+  }
+
+  .home-welcome h3 {
+    font-size: 26px;
+  }
+
+  .home-welcome p {
+    font-size: 12px;
+  }
+}
+
+/* =========================
+   MOBILE
+   ========================= */
+
+@media (max-width: 430px) {
+  .home-container {
+    padding: 15px 10px 45px;
+  }
+
+  .home-content {
+    padding: 18px;
+
+    border-radius: 18px;
+  }
+
+  .home-logo-icon {
+    width: 45px;
+    height: 45px;
+  }
+
+  .home-header-text h2 {
+    font-size: 14px;
+  }
+
+  .home-header-text p {
+    font-size: 10px;
+  }
+
+  .welcome-badge {
+    font-size: 8px;
+  }
+
+  .home-welcome h3 {
+    font-size: 23px;
+  }
+
+  .home-welcome p {
+    font-size: 11px;
+  }
+
+  .role-btn {
+    min-height: 68px;
+    padding: 10px;
+  }
+
+  .role-icon {
+    width: 42px;
+    height: 42px;
+
+    font-size: 18px;
+  }
+
+  .role-text strong {
+    font-size: 14px;
+  }
+
+  .role-text small {
+    font-size: 9px;
+  }
+
+  .role-arrow {
+    width: 30px;
+    height: 30px;
+  }
+
+  .home-footer {
+    bottom: 8px;
+    font-size: 9px;
+  }
+}
+
+/* =========================
+   REDUCED MOTION
+   ========================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .home-container *,
+  .home-container *::before,
+  .home-container *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
