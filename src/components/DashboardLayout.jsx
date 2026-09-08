@@ -1,5 +1,5 @@
 import Sidebar from "../components/Sidebar";
-import "../styles/dashBoard.css";
+import "../styles/Dashboard.css";
 
 function DashboardLayout({
   title,
