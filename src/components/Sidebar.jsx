@@ -36,6 +36,7 @@ function Sidebar({ role }) {
       { name: "Reports", icon: <FaClipboardList />, path: "/admin/reports" },
       { name: "Courses", icon: <FaBook />, path: "/admin/courses" },
       { name: "Assign Course", icon: <FaBook />, path: "/admin/assign-course" },
+      { name: "Profile", icon: <FaUser />, path: "/admin/profile" },
     ],
   };
 

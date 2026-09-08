@@ -26,6 +26,7 @@ import Profile from "../pages/student/Profile";
 import LecturerProfile from "../pages/lecturer/Profile";
 import AddStudent from "../pages/admin/AddStudent";
 import AddLecturer from "../pages/admin/AddLecturer";
+import AdminProfile from "../pages/admin/Profile";
 
 
 function AppRoutes() {
@@ -115,6 +116,14 @@ function AppRoutes() {
       <Route
     path="/forgot-password"
     element={<ForgotPassword />}
+/>
+<Route
+  path="/admin/profile"
+  element={
+    <ProtectedRoute>
+      <AdminProfile />
+    </ProtectedRoute>
+  }
 />
 
 <Route
