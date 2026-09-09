@@ -1,15 +1,30 @@
+import { useEffect, useMemo, useState } from "react";
 
-
-import { useEffect, useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
-import "../../styles/adminLecturers.css";
-import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
-import API_URL from "../../config/api";
 
+import "../../styles/adminLecturers.css";
+
+import {
+  FaEye,
+  FaEdit,
+  FaTrash,
+  FaSearch,
+  FaFilter,
+  FaUsers,
+  FaUserTie,
+  FaEnvelope,
+  FaIdBadge,
+  FaBuilding,
+  FaTimes,
+} from "react-icons/fa";
+
+import API_URL from "../../config/api";
 
 function Lecturers() {
   const [lecturers, setLecturers] = useState([]);
+
   const [search, setSearch] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
 
   const [selectedLecturer, setSelectedLecturer] = useState(null);
   const [editingLecturer, setEditingLecturer] = useState(null);
@@ -21,9 +36,13 @@ function Lecturers() {
     department: "",
   });
 
-  const [loading, setLoading] = useState(true);
+  const [editLoading, setEditLoading] = useState(false);
 
-  
+  /*
+  ============================================================
+  LOAD LECTURERS
+  ============================================================
+  */
 
   useEffect(() => {
     loadLecturers();
@@ -31,36 +50,97 @@ function Lecturers() {
 
   async function loadLecturers() {
     try {
-      setLoading(true);
-
-      const token = localStorage.getItem("token");
-
       const response = await fetch(`${API_URL}/api/lecturers`, {
-        method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch lecturers");
+        throw new Error("Failed to fetch lecturers.");
       }
 
       const data = await response.json();
 
       setLecturers(data.lecturers || []);
-
     } catch (error) {
       console.error("Error loading lecturers:", error);
-      setLecturers([]);
 
-    } finally {
-      setLoading(false);
+      setLecturers([]);
     }
   }
 
- 
-  function handleEdit(lecturer) {
+  /*
+  ============================================================
+  GET UNIQUE DEPARTMENTS
+  ============================================================
+  */
+
+  const departments = useMemo(() => {
+    return [
+      ...new Set(
+        lecturers
+          .map((lecturer) => lecturer.department)
+          .filter(Boolean)
+      ),
+    ].sort();
+  }, [lecturers]);
+
+  /*
+  ============================================================
+  FILTER LECTURERS
+  ============================================================
+  */
+
+  const filteredLecturers = useMemo(() => {
+    const searchText = search.trim().toLowerCase();
+
+    return lecturers.filter((lecturer) => {
+      const matchesSearch =
+        !searchText ||
+        lecturer.name
+          ?.toLowerCase()
+          .includes(searchText) ||
+        lecturer.staffId
+          ?.toLowerCase()
+          .includes(searchText) ||
+        lecturer.email
+          ?.toLowerCase()
+          .includes(searchText) ||
+        lecturer.department
+          ?.toLowerCase()
+          .includes(searchText);
+
+      const matchesDepartment =
+        !departmentFilter ||
+        lecturer.department === departmentFilter;
+
+      return matchesSearch && matchesDepartment;
+    });
+  }, [
+    lecturers,
+    search,
+    departmentFilter,
+  ]);
+
+  /*
+  ============================================================
+  CLEAR FILTERS
+  ============================================================
+  */
+
+  function clearFilters() {
+    setSearch("");
+    setDepartmentFilter("");
+  }
+
+  /*
+  ============================================================
+  EDIT LECTURER
+  ============================================================
+  */
+
+  function openEditModal(lecturer) {
     setEditingLecturer(lecturer);
 
     setEditForm({
@@ -71,12 +151,11 @@ function Lecturers() {
     });
   }
 
-
-  async function updateLecturer() {
-    if (!editingLecturer) return;
+  async function handleEditSubmit(e) {
+    e.preventDefault();
 
     try {
-      const token = localStorage.getItem("token");
+      setEditLoading(true);
 
       const response = await fetch(
         `${API_URL}/api/lecturers/${editingLecturer._id}`,
@@ -85,7 +164,10 @@ function Lecturers() {
 
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+
+            Authorization: `Bearer ${localStorage.getItem(
+              "token"
+            )}`,
           },
 
           body: JSON.stringify(editForm),
@@ -96,44 +178,63 @@ function Lecturers() {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to update lecturer"
+          data.message ||
+            "Failed to update lecturer."
         );
       }
 
-      await loadLecturers();
+      /*
+      Update lecturer directly in the table
+      */
+
+      setLecturers((currentLecturers) =>
+        currentLecturers.map((lecturer) =>
+          lecturer._id === editingLecturer._id
+            ? data.lecturer
+            : lecturer
+        )
+      );
 
       setEditingLecturer(null);
 
       alert("Lecturer updated successfully.");
-
     } catch (error) {
-      console.error("Error updating lecturer:", error);
-
-      alert(
-        error.message || "Failed to update lecturer."
+      console.error(
+        "Edit lecturer error:",
+        error
       );
+
+      alert(error.message);
+    } finally {
+      setEditLoading(false);
     }
   }
 
-  
+  /*
+  ============================================================
+  DELETE LECTURER
+  ============================================================
+  */
 
-  async function deleteLecturer(id) {
+  async function handleDeleteLecturer(lecturer) {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this lecturer?"
+      `Are you sure you want to delete ${lecturer.name}?`
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     try {
-      const token = localStorage.getItem("token");
-
       const response = await fetch(
-        `${API_URL}/api/lecturers/${id}`,
+        `${API_URL}/api/lecturers/${lecturer._id}`,
         {
           method: "DELETE",
 
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${localStorage.getItem(
+              "token"
+            )}`,
           },
         }
       );
@@ -142,438 +243,785 @@ function Lecturers() {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to delete lecturer"
+          data.message ||
+            "Failed to delete lecturer."
         );
       }
 
-      await loadLecturers();
+      /*
+      Remove lecturer from table
+      */
 
-     
+      setLecturers((currentLecturers) =>
+        currentLecturers.filter(
+          (item) =>
+            item._id !== lecturer._id
+        )
+      );
+
+      /*
+      Close view modal if open
+      */
+
       if (
-        selectedLecturer &&
-        selectedLecturer._id === id
+        selectedLecturer?._id ===
+        lecturer._id
       ) {
         setSelectedLecturer(null);
       }
 
       alert("Lecturer deleted successfully.");
-
     } catch (error) {
-      console.error("Error deleting lecturer:", error);
-
-      alert(
-        error.message || "Failed to delete lecturer."
+      console.error(
+        "Delete lecturer error:",
+        error
       );
+
+      alert(error.message);
     }
   }
 
-  
+  /*
+  ============================================================
+  AVATAR LETTER
+  ============================================================
+  */
 
-  const filteredLecturers = lecturers.filter(
-    (lecturer) =>
-      lecturer.name
-        ?.toLowerCase()
-        .includes(search.toLowerCase()) ||
-      lecturer.staffId
-        ?.toLowerCase()
-        .includes(search.toLowerCase()) ||
-      lecturer.email
-        ?.toLowerCase()
-        .includes(search.toLowerCase()) ||
-      lecturer.department
-        ?.toLowerCase()
-        .includes(search.toLowerCase())
-  );
+  function getInitial(name) {
+    return (
+      name?.charAt(0)?.toUpperCase() || "L"
+    );
+  }
 
- 
+  /*
+  ============================================================
+  PAGE
+  ============================================================
+  */
+
   return (
-    <DashboardLayout
-      title="Lecturers"
-      role="admin"
-    >
-      <div className="lecturers-page">
-
-        {/* PAGE HEADER */}
-
-        <div className="page-heading">
-          <div>
-            <h1>Lecturers</h1>
-
-            <p>
-              Manage all registered lecturers.
-            </p>
-          </div>
-        </div>
-
-
-        {/* SEARCH */}
-
-        <div className="table-header">
-
-          <input
-            type="text"
-            placeholder="Search lecturer..."
-            value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
-            }
-          />
-
-        </div>
-
-
-        {/* TABLE */}
-
-        <div className="table-container">
-
-          <table className="admin-table">
-
-            <thead>
-
-              <tr>
-                <th>Name</th>
-                <th>Staff ID</th>
-                <th>Email</th>
-                <th>Department</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-
-            </thead>
-
-
-            <tbody>
-
-              {loading ? (
-
-                <tr>
-
-                  <td
-                    colSpan="6"
-                    className="no-students"
-                  >
-                    Loading lecturers...
-                  </td>
-
-                </tr>
-
-              ) : filteredLecturers.length > 0 ? (
-
-                filteredLecturers.map(
-                  (lecturer) => (
-
-                    <tr
-                      key={lecturer._id}
-                    >
-
-                      <td>
-                        {lecturer.name}
-                      </td>
-
-
-                      <td>
-                        {lecturer.staffId ||
-                          "N/A"}
-                      </td>
-
-
-                      <td>
-                        {lecturer.email}
-                      </td>
-
-
-                      <td>
-                        {lecturer.department ||
-                          "N/A"}
-                      </td>
-
-
-                      <td>
-
-                        {lecturer.isVerified ? (
-
-                          <span className="status-active">
-                            Verified
-                          </span>
-
-                        ) : (
-
-                          <span className="status-pending">
-                            Pending
-                          </span>
-
-                        )}
-
-                      </td>
-
-
-                      {/* ACTIONS */}
-
-                      <td className="action-buttons">
-
-                        {/* VIEW */}
-
-                        <button
-                          type="button"
-                          className="view-btn"
-                          title="View lecturer"
-                          onClick={() =>
-                            setSelectedLecturer(
-                              lecturer
-                            )
-                          }
-                        >
-                          <FaEye />
-                        </button>
-
-
-                        {/* EDIT */}
-
-                        <button
-                          type="button"
-                          className="edit-btn"
-                          title="Edit lecturer"
-                          onClick={() =>
-                            handleEdit(
-                              lecturer
-                            )
-                          }
-                        >
-                          <FaEdit />
-                        </button>
-
-
-                        {/* DELETE */}
-
-                        <button
-                          type="button"
-                          className="delete-btn"
-                          title="Delete lecturer"
-                          onClick={() =>
-                            deleteLecturer(
-                              lecturer._id
-                            )
-                          }
-                        >
-                          <FaTrash />
-                        </button>
-
-                      </td>
-
-                    </tr>
-
-                  )
-                )
-
-              ) : (
-
-                <tr>
-
-                  <td
-                    colSpan="6"
-                    className="no-students"
-                  >
-                    No lecturers found.
-                  </td>
-
-                </tr>
-
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-
-        {selectedLecturer && (
-
-          <div
-            className="modal-overlay"
-            onClick={() =>
-              setSelectedLecturer(null)
-            }
-          >
-
-            <div
-              className="student-modal"
-              onClick={(e) =>
-                e.stopPropagation()
-              }
-            >
-
-              <div className="modal-header">
-
-                <div>
-
-                  <h2>
-                    Lecturer Details
-                  </h2>
-
-                  <p>
-                    View lecturer information.
-                  </p>
-
-                </div>
-
-
-                <button
-                  type="button"
-                  className="modal-close-icon"
-                  onClick={() =>
-                    setSelectedLecturer(null)
-                  }
-                >
-                  ×
-                </button>
-
+    <>
+      <DashboardLayout
+        title="Lecturers"
+        role="admin"
+      >
+        <div className="lecturers-page">
+
+          {/* ==================================================
+              PAGE HEADER
+          ================================================== */}
+
+          <div className="lecturers-page-header">
+
+            <div className="lecturers-heading">
+
+              <div className="heading-icon">
+                <FaUserTie />
               </div>
 
+              <div>
+                <h1>
+                  Lecturer Management
+                </h1>
 
-              <div className="student-info">
-
-                <div className="info-item">
-
-                  <span>Name</span>
-
-                  <strong>
-                    {selectedLecturer.name ||
-                      "N/A"}
-                  </strong>
-
-                </div>
-
-
-                <div className="info-item">
-
-                  <span>Email</span>
-
-                  <strong>
-                    {selectedLecturer.email ||
-                      "N/A"}
-                  </strong>
-
-                </div>
-
-
-                <div className="info-item">
-
-                  <span>Staff ID</span>
-
-                  <strong>
-                    {selectedLecturer.staffId ||
-                      "N/A"}
-                  </strong>
-
-                </div>
-
-
-                <div className="info-item">
-
-                  <span>Department</span>
-
-                  <strong>
-                    {selectedLecturer.department ||
-                      "N/A"}
-                  </strong>
-
-                </div>
-
-
-                <div className="info-item">
-
-                  <span>Status</span>
-
-                  <strong
-                    className={
-                      selectedLecturer.isVerified
-                        ? "verified-text"
-                        : "pending-text"
-                    }
-                  >
-                    {selectedLecturer.isVerified
-                      ? "Verified"
-                      : "Pending"}
-                  </strong>
-
-                </div>
-
+                <p>
+                  View, search, filter and
+                  manage all registered
+                  lecturers.
+                </p>
               </div>
 
+            </div>
 
-              <button
-                type="button"
-                className="close-modal-btn"
-                onClick={() =>
-                  setSelectedLecturer(null)
-                }
-              >
-                Close
-              </button>
+            {/* TOTAL COUNT */}
+
+            <div className="lecturer-count-card">
+
+              <div className="lecturer-count-icon">
+                <FaUsers />
+              </div>
+
+              <div className="lecturer-count-content">
+
+                <span>
+                  Total Lecturers
+                </span>
+
+                <strong>
+                  {filteredLecturers.length}
+                </strong>
+
+              </div>
 
             </div>
 
           </div>
 
-        )}
+          {/* ==================================================
+              FILTER CARD
+          ================================================== */}
 
+          <div className="lecturer-filter-card">
 
-        {/* ========================================
-            EDIT MODAL
-        ======================================== */}
+            <div className="filter-title">
 
-        {editingLecturer && (
+              <FaFilter />
 
-          <div
-            className="modal-overlay"
-            onClick={() =>
-              setEditingLecturer(null)
-            }
-          >
+              <span>
+                Lecturer Filters
+              </span>
 
-            <div
-              className="student-modal"
-              onClick={(e) =>
-                e.stopPropagation()
-              }
-            >
+            </div>
 
-              <div className="modal-header">
+            <div className="lecturer-filters">
 
-                <div>
+              {/* SEARCH */}
 
-                  <h2>
-                    Edit Lecturer
-                  </h2>
+              <div className="lecturer-search-box">
 
-                  <p>
-                    Update lecturer information.
-                  </p>
+                <FaSearch />
 
-                </div>
-
-
-                <button
-                  type="button"
-                  className="modal-close-icon"
-                  onClick={() =>
-                    setEditingLecturer(null)
+                <input
+                  type="text"
+                  placeholder="Search by name, staff ID, email or department..."
+                  value={search}
+                  onChange={(e) =>
+                    setSearch(e.target.value)
                   }
-                >
-                  ×
-                </button>
+                />
 
               </div>
 
+              {/* DEPARTMENT */}
 
-              <div className="student-info">
+              <select
+                value={departmentFilter}
+                onChange={(e) =>
+                  setDepartmentFilter(
+                    e.target.value
+                  )
+                }
+              >
+                <option value="">
+                  All Departments
+                </option>
+
+                {departments.map(
+                  (department) => (
+                    <option
+                      key={department}
+                      value={department}
+                    >
+                      {department}
+                    </option>
+                  )
+                )}
+              </select>
+
+              {/* CLEAR */}
+
+              <button
+                type="button"
+                className="clear-lecturer-filter-btn"
+                onClick={clearFilters}
+              >
+                <FaTimes />
+
+                Clear Filters
+              </button>
+
+            </div>
+
+            {/* RESULT COUNT */}
+
+            <div className="lecturer-filter-result">
+
+              Showing{" "}
+
+              <strong>
+                {filteredLecturers.length}
+              </strong>{" "}
+
+              of{" "}
+
+              <strong>
+                {lecturers.length}
+              </strong>{" "}
+
+              lecturers
+
+            </div>
+
+          </div>
+
+          {/* ==================================================
+              TABLE
+          ================================================== */}
+
+          <div className="lecturers-table-card">
+
+            <div className="table-top-bar">
+
+              <div>
+                <h2>
+                  All Lecturers
+                </h2>
+
+                <p>
+                  Lecturer accounts
+                </p>
+              </div>
+
+              <div className="table-total">
+
+                <FaUsers />
+
+                {filteredLecturers.length}
+
+              </div>
+
+            </div>
+
+            <div className="table-responsive">
+
+              <table className="admin-lecturers-table">
+
+                <thead>
+
+                  <tr>
+
+                    <th>#</th>
+
+                    <th>
+                      Lecturer
+                    </th>
+
+                    <th>
+                      Staff ID
+                    </th>
+
+                    <th>
+                      Email
+                    </th>
+
+                    <th>
+                      Department
+                    </th>
+
+                    <th>
+                      Status
+                    </th>
+
+                    <th>
+                      Actions
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {filteredLecturers.length >
+                  0 ? (
+
+                    filteredLecturers.map(
+                      (
+                        lecturer,
+                        index
+                      ) => (
+
+                        <tr
+                          key={
+                            lecturer._id
+                          }
+                        >
+
+                          {/* NUMBER */}
+
+                          <td className="lecturer-number">
+                            {index + 1}
+                          </td>
+
+                          {/* LECTURER */}
+
+                          <td>
+
+                            <div className="lecturer-name-cell">
+
+                              <div className="lecturer-avatar">
+                                {getInitial(
+                                  lecturer.name
+                                )}
+                              </div>
+
+                              <div className="lecturer-name-info">
+
+                                <strong>
+                                  {
+                                    lecturer.name
+                                  }
+                                </strong>
+
+                                <small>
+                                  Lecturer
+                                </small>
+
+                              </div>
+
+                            </div>
+
+                          </td>
+
+                          {/* STAFF ID */}
+
+                          <td>
+
+                            <span className="staff-id-badge">
+
+                              <FaIdBadge />
+
+                              {lecturer.staffId ||
+                                "N/A"}
+
+                            </span>
+
+                          </td>
+
+                          {/* EMAIL */}
+
+                          <td>
+
+                            <div className="lecturer-email">
+
+                              <FaEnvelope />
+
+                              <span>
+                                {
+                                  lecturer.email ||
+                                  "N/A"
+                                }
+                              </span>
+
+                            </div>
+
+                          </td>
+
+                          {/* DEPARTMENT */}
+
+                          <td>
+
+                            <span className="department-badge">
+
+                              <FaBuilding />
+
+                              {
+                                lecturer.department ||
+                                "N/A"
+                              }
+
+                            </span>
+
+                          </td>
+
+                          {/* STATUS */}
+
+                          <td>
+
+                            {lecturer.isVerified ? (
+
+                              <span className="lecturer-status verified">
+                                <span className="status-dot"></span>
+                                Verified
+                              </span>
+
+                            ) : (
+
+                              <span className="lecturer-status pending">
+                                <span className="status-dot"></span>
+                                Pending
+                              </span>
+
+                            )}
+
+                          </td>
+
+                          {/* ACTIONS */}
+
+                          <td>
+
+                            <div className="lecturer-action-buttons">
+
+                              <button
+                                type="button"
+                                className="lecturer-view-btn"
+                                title="View lecturer"
+                                onClick={() =>
+                                  setSelectedLecturer(
+                                    lecturer
+                                  )
+                                }
+                              >
+                                <FaEye />
+                              </button>
+
+                              <button
+                                type="button"
+                                className="lecturer-edit-btn"
+                                title="Edit lecturer"
+                                onClick={() =>
+                                  openEditModal(
+                                    lecturer
+                                  )
+                                }
+                              >
+                                <FaEdit />
+                              </button>
+
+                              <button
+                                type="button"
+                                className="lecturer-delete-btn"
+                                title="Delete lecturer"
+                                onClick={() =>
+                                  handleDeleteLecturer(
+                                    lecturer
+                                  )
+                                }
+                              >
+                                <FaTrash />
+                              </button>
+
+                            </div>
+
+                          </td>
+
+                        </tr>
+
+                      )
+                    )
+
+                  ) : (
+
+                    <tr>
+
+                      <td
+                        colSpan="7"
+                        className="no-lecturers"
+                      >
+
+                        <div>
+
+                          <FaUserTie />
+
+                          <h3>
+                            No lecturers found
+                          </h3>
+
+                          <p>
+                            Try changing your
+                            search or filter.
+                          </p>
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </DashboardLayout>
+
+      {/* ======================================================
+          VIEW LECTURER MODAL
+      ====================================================== */}
+
+      {selectedLecturer && (
+
+        <div
+          className="lecturer-modal-overlay"
+          onClick={() =>
+            setSelectedLecturer(null)
+          }
+        >
+
+          <div
+            className="lecturer-modal"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+
+            {/* HEADER */}
+
+            <div className="lecturer-modal-header">
+
+              <div>
+
+                <h2>
+                  Lecturer Details
+                </h2>
+
+                <p>
+                  Lecturer account
+                  information
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                className="lecturer-modal-close"
+                onClick={() =>
+                  setSelectedLecturer(null)
+                }
+              >
+                ×
+              </button>
+
+            </div>
+
+            {/* PROFILE */}
+
+            <div className="lecturer-modal-profile">
+
+              <div className="large-lecturer-avatar">
+
+                {getInitial(
+                  selectedLecturer.name
+                )}
+
+              </div>
+
+              <h3>
+                {selectedLecturer.name}
+              </h3>
+
+              <span>
+                {selectedLecturer.email}
+              </span>
+
+            </div>
+
+            {/* INFORMATION */}
+
+            <div className="lecturer-details-grid">
+
+              <div className="lecturer-detail-item">
+
+                <div className="detail-icon">
+                  <FaUserTie />
+                </div>
+
+                <div>
+
+                  <span>
+                    Full Name
+                  </span>
+
+                  <strong>
+                    {
+                      selectedLecturer.name ||
+                      "N/A"
+                    }
+                  </strong>
+
+                </div>
+
+              </div>
+
+              <div className="lecturer-detail-item">
+
+                <div className="detail-icon">
+                  <FaEnvelope />
+                </div>
+
+                <div>
+
+                  <span>
+                    Email Address
+                  </span>
+
+                  <strong>
+                    {
+                      selectedLecturer.email ||
+                      "N/A"
+                    }
+                  </strong>
+
+                </div>
+
+              </div>
+
+              <div className="lecturer-detail-item">
+
+                <div className="detail-icon">
+                  <FaIdBadge />
+                </div>
+
+                <div>
+
+                  <span>
+                    Staff ID
+                  </span>
+
+                  <strong>
+                    {
+                      selectedLecturer.staffId ||
+                      "N/A"
+                    }
+                  </strong>
+
+                </div>
+
+              </div>
+
+              <div className="lecturer-detail-item">
+
+                <div className="detail-icon">
+                  <FaBuilding />
+                </div>
+
+                <div>
+
+                  <span>
+                    Department
+                  </span>
+
+                  <strong>
+                    {
+                      selectedLecturer.department ||
+                      "N/A"
+                    }
+                  </strong>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* STATUS */}
+
+            <div className="lecturer-modal-status">
+
+              <span>
+                Account Status
+              </span>
+
+              {selectedLecturer.isVerified ? (
+
+                <strong className="verified-text">
+                  <span></span>
+                  Verified
+                </strong>
+
+              ) : (
+
+                <strong className="pending-text">
+                  <span></span>
+                  Pending
+                </strong>
+
+              )}
+
+            </div>
+
+            <button
+              type="button"
+              className="lecturer-close-modal-btn"
+              onClick={() =>
+                setSelectedLecturer(null)
+              }
+            >
+              Close
+            </button>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* ======================================================
+          EDIT LECTURER MODAL
+      ====================================================== */}
+
+      {editingLecturer && (
+
+        <div
+          className="lecturer-modal-overlay"
+          onClick={() => {
+
+            if (!editLoading) {
+              setEditingLecturer(null);
+            }
+
+          }}
+        >
+
+          <div
+            className="lecturer-modal edit-lecturer-modal"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+
+            {/* HEADER */}
+
+            <div className="lecturer-modal-header">
+
+              <div>
+
+                <h2>
+                  Edit Lecturer
+                </h2>
+
+                <p>
+                  Update lecturer
+                  information
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                className="lecturer-modal-close"
+                disabled={editLoading}
+                onClick={() =>
+                  setEditingLecturer(null)
+                }
+              >
+                ×
+              </button>
+
+            </div>
+
+            {/* FORM */}
+
+            <form
+              onSubmit={handleEditSubmit}
+            >
+
+              <div className="lecturer-edit-form">
 
                 {/* NAME */}
 
-                <div className="info-item">
+                <label>
 
-                  <span>Name</span>
+                  <span>
+                    Full Name
+                  </span>
 
                   <input
                     type="text"
@@ -581,62 +1029,75 @@ function Lecturers() {
                     onChange={(e) =>
                       setEditForm({
                         ...editForm,
-                        name: e.target.value,
+                        name:
+                          e.target.value,
                       })
                     }
-                    placeholder="Enter name"
+                    placeholder="Enter lecturer name"
+                    required
                   />
 
-                </div>
-
+                </label>
 
                 {/* EMAIL */}
 
-                <div className="info-item">
+                <label>
 
-                  <span>Email</span>
+                  <span>
+                    Email Address
+                  </span>
 
                   <input
                     type="email"
-                    value={editForm.email}
+                    value={
+                      editForm.email
+                    }
                     onChange={(e) =>
                       setEditForm({
                         ...editForm,
-                        email: e.target.value,
+                        email:
+                          e.target.value,
                       })
                     }
-                    placeholder="Enter email"
+                    placeholder="Enter email address"
+                    required
                   />
 
-                </div>
-
+                </label>
 
                 {/* STAFF ID */}
 
-                <div className="info-item">
+                <label>
 
-                  <span>Staff ID</span>
+                  <span>
+                    Staff ID
+                  </span>
 
                   <input
                     type="text"
-                    value={editForm.staffId}
+                    value={
+                      editForm.staffId
+                    }
                     onChange={(e) =>
                       setEditForm({
                         ...editForm,
-                        staffId: e.target.value,
+                        staffId:
+                          e.target.value,
                       })
                     }
                     placeholder="Enter staff ID"
+                    required
                   />
 
-                </div>
-
+                </label>
 
                 {/* DEPARTMENT */}
 
-                <div className="info-item">
+                <label>
 
-                  <span>Department</span>
+                  <span>
+                    Department
+                  </span>
 
                   <input
                     type="text"
@@ -653,25 +1114,18 @@ function Lecturers() {
                     placeholder="Enter department"
                   />
 
-                </div>
+                </label>
 
               </div>
 
+              {/* ACTIONS */}
 
-              <div className="modal-buttons">
-
-                <button
-                  type="button"
-                  className="close-modal-btn"
-                  onClick={updateLecturer}
-                >
-                  Save Changes
-                </button>
-
+              <div className="lecturer-edit-actions">
 
                 <button
                   type="button"
-                  className="cancel-modal-btn"
+                  className="lecturer-cancel-btn"
+                  disabled={editLoading}
                   onClick={() =>
                     setEditingLecturer(null)
                   }
@@ -679,17 +1133,29 @@ function Lecturers() {
                   Cancel
                 </button>
 
+                <button
+                  type="submit"
+                  className="lecturer-save-btn"
+                  disabled={editLoading}
+                >
+
+                  {editLoading
+                    ? "Saving..."
+                    : "Save Changes"}
+
+                </button>
+
               </div>
 
-            </div>
+            </form>
 
           </div>
 
-        )}
+        </div>
 
-      </div>
+      )}
 
-    </DashboardLayout>
+    </>
   );
 }
 
