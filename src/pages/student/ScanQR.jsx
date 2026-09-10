@@ -14,7 +14,7 @@ import API_URL from "../../config/api";
 
 import "../../styles/scanQR.css";
 
-const ALLOWED_RADIUS = 50; // meters
+const ALLOWED_RADIUS =2000000; // meters
 
 function ScanQR() {
   const [scanning, setScanning] = useState(false);
