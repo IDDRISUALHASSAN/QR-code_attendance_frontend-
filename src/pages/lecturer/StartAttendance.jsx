@@ -25,6 +25,8 @@ function StartAttendance() {
 
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState("");
+
+  // Lecturer enters attendance duration manually.
   const [duration, setDuration] = useState("15");
 
   const [loading, setLoading] = useState(true);
@@ -34,8 +36,15 @@ function StartAttendance() {
   const [apiError, setApiError] = useState("");
 
   // GPS states
-  const [gettingLocation, setGettingLocation] = useState(false);
-  const [lecturerLocation, setLecturerLocation] = useState(null);
+  const [gettingLocation, setGettingLocation] =
+    useState(false);
+
+  const [lecturerLocation, setLecturerLocation] =
+    useState(null);
+
+  // Attendance countdown
+  const [remainingSeconds, setRemainingSeconds] =
+    useState(null);
 
   useEffect(() => {
     loadCourses();
@@ -43,7 +52,9 @@ function StartAttendance() {
 
   useEffect(() => {
     if (location.state?.selectedCourse) {
-      setSelectedCourse(location.state.selectedCourse);
+      setSelectedCourse(
+        location.state.selectedCourse
+      );
     }
   }, [location.state]);
 
@@ -67,7 +78,9 @@ function StartAttendance() {
 
     if (!qrToken) {
       setQrSrc("");
-      setQrError("No QR token was returned by the server.");
+      setQrError(
+        "No QR token was returned by the server."
+      );
       return;
     }
 
@@ -77,12 +90,155 @@ function StartAttendance() {
         setQrError("");
       })
       .catch((error) => {
-        console.error("QR code generation failed:", error);
+        console.error(
+          "QR code generation failed:",
+          error
+        );
 
         setQrSrc("");
-        setQrError("QR code generation failed.");
+        setQrError(
+          "QR code generation failed."
+        );
       });
   }, [session]);
+
+  // ---------------------------------------------------------
+  // AUTOMATIC SESSION COUNTDOWN
+  // ---------------------------------------------------------
+  useEffect(() => {
+    if (
+      !session ||
+      !session.endTime
+    ) {
+      setRemainingSeconds(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const end = new Date(
+        session.endTime
+      ).getTime();
+
+      const difference =
+        end - now;
+
+      if (difference <= 0) {
+        setRemainingSeconds(0);
+
+        // Automatically close the attendance session.
+        autoCloseAttendance();
+
+        return;
+      }
+
+      setRemainingSeconds(
+        Math.ceil(difference / 1000)
+      );
+    };
+
+    updateCountdown();
+
+    const timer = setInterval(
+      updateCountdown,
+      1000
+    );
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [session]);
+
+  // ---------------------------------------------------------
+  // AUTOMATICALLY CLOSE ATTENDANCE
+  // ---------------------------------------------------------
+  async function autoCloseAttendance() {
+    if (!session?._id) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/attendance-sessions/close/${session._id}`,
+        {
+          method: "PUT",
+
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem(
+              "token"
+            )}`,
+          },
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        console.error(
+          "Automatic session close failed:",
+          data.message
+        );
+
+        return;
+      }
+
+      console.log(
+        "Attendance session automatically closed."
+      );
+
+      setSession(null);
+      setQrSrc("");
+      setQrError("");
+      setRemainingSeconds(null);
+      setLecturerLocation(null);
+      setSelectedCourse("");
+
+      setApiError(
+        "Attendance session ended automatically."
+      );
+    } catch (error) {
+      console.error(
+        "Automatic session close error:",
+        error
+      );
+    }
+  }
+
+  // ---------------------------------------------------------
+  // FORMAT REMAINING TIME
+  // ---------------------------------------------------------
+  function formatRemainingTime(
+    seconds
+  ) {
+    if (
+      seconds === null ||
+      seconds === undefined
+    ) {
+      return "--";
+    }
+
+    const hours =
+      Math.floor(seconds / 3600);
+
+    const minutes =
+      Math.floor(
+        (seconds % 3600) / 60
+      );
+
+    const secs =
+      seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    }
+
+    if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    }
+
+    return `${secs}s`;
+  }
 
   // ---------------------------------------------------------
   // Load lecturer assigned courses
@@ -95,7 +251,8 @@ function StartAttendance() {
       const user = (() => {
         try {
           return JSON.parse(
-            localStorage.getItem("user") || "null"
+            localStorage.getItem("user") ||
+              "null"
           );
         } catch {
           return null;
@@ -112,7 +269,8 @@ function StartAttendance() {
         `${API_URL}/api/course-assignments/lecturer/${user.id}`
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -121,7 +279,9 @@ function StartAttendance() {
         );
       }
 
-      setCourses(data.assignments || []);
+      setCourses(
+        data.assignments || []
+      );
     } catch (error) {
       console.error(
         "Error loading assigned courses:",
@@ -143,120 +303,138 @@ function StartAttendance() {
   // GET LECTURER GPS LOCATION
   // ---------------------------------------------------------
   function getLecturerLocation() {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(
-          new Error(
-            "GPS is not supported by this browser or device."
-          )
-        );
+    return new Promise(
+      (resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(
+            new Error(
+              "GPS is not supported by this browser or device."
+            )
+          );
 
-        return;
-      }
+          return;
+        }
 
-      setGettingLocation(true);
+        setGettingLocation(true);
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setGettingLocation(false);
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setGettingLocation(false);
 
-          const latitude =
-            position.coords.latitude;
+            const latitude =
+              position.coords.latitude;
 
-          const longitude =
-            position.coords.longitude;
+            const longitude =
+              position.coords.longitude;
 
-          const accuracy =
-            position.coords.accuracy;
+            const accuracy =
+              position.coords.accuracy;
 
-          // Make sure coordinates are valid
-          if (
-            !Number.isFinite(latitude) ||
-            !Number.isFinite(longitude)
-          ) {
-            reject(
-              new Error(
-                "The browser returned an invalid GPS location."
+            // Make sure coordinates are valid
+            if (
+              !Number.isFinite(
+                latitude
+              ) ||
+              !Number.isFinite(
+                longitude
               )
+            ) {
+              reject(
+                new Error(
+                  "The browser returned an invalid GPS location."
+                )
+              );
+
+              return;
+            }
+
+            const locationData = {
+              latitude,
+              longitude,
+              accuracy,
+            };
+
+            setLecturerLocation(
+              locationData
             );
 
-            return;
+            console.log(
+              "Lecturer GPS location:",
+              locationData
+            );
+
+            resolve(
+              locationData
+            );
+          },
+
+          (error) => {
+            setGettingLocation(
+              false
+            );
+
+            console.error(
+              "Lecturer GPS error:",
+              error
+            );
+
+            let errorMessage =
+              "Unable to detect your location.";
+
+            // Permission denied
+            if (error.code === 1) {
+              errorMessage =
+                "Location permission was denied. Please allow location access in your browser settings and try again.";
+            }
+
+            // Position unavailable
+            else if (
+              error.code === 2
+            ) {
+              errorMessage =
+                "Your location could not be detected. Please turn on Location/GPS on your device and try again.";
+            }
+
+            // Timeout
+            else if (
+              error.code === 3
+            ) {
+              errorMessage =
+                "Location detection timed out. Please make sure Location/GPS is enabled and try again.";
+            }
+
+            reject(
+              new Error(
+                errorMessage
+              )
+            );
+          },
+
+          {
+            enableHighAccuracy: true,
+            timeout: 30000,
+            maximumAge: 0,
           }
-
-          const locationData = {
-            latitude,
-            longitude,
-            accuracy,
-          };
-
-          setLecturerLocation(locationData);
-
-          console.log(
-            "Lecturer GPS location:",
-            locationData
-          );
-
-          resolve(locationData);
-        },
-
-        (error) => {
-          setGettingLocation(false);
-
-          console.error(
-            "Lecturer GPS error:",
-            error
-          );
-
-          let errorMessage =
-            "Unable to detect your location.";
-
-          // Permission denied
-          if (error.code === 1) {
-            errorMessage =
-              "Location permission was denied. Please allow location access in your browser settings and try again.";
-          }
-
-          // Position unavailable
-          else if (error.code === 2) {
-            errorMessage =
-              "Your location could not be detected. Please turn on Location/GPS on your device and try again.";
-          }
-
-          // Timeout
-          else if (error.code === 3) {
-            errorMessage =
-              "Location detection timed out. Please make sure Location/GPS is enabled and try again.";
-          }
-
-          reject(new Error(errorMessage));
-        },
-
-        {
-          enableHighAccuracy: true,
-          timeout: 30000,
-          maximumAge: 0,
-        }
-      );
-    });
+        );
+      }
+    );
   }
 
   // ---------------------------------------------------------
   // Check browser location permission
   // ---------------------------------------------------------
   async function checkLocationPermission() {
-    // Some browsers support the Permissions API.
-    // Some browsers/devices do not, so we safely ignore
-    // errors and allow getCurrentPosition() to request it.
-
     if (!navigator.permissions) {
       return "unknown";
     }
 
     try {
       const permission =
-        await navigator.permissions.query({
-          name: "geolocation",
-        });
+        await navigator.permissions.query(
+          {
+            name: "geolocation",
+          }
+        );
 
       console.log(
         "Location permission:",
@@ -283,7 +461,28 @@ function StartAttendance() {
     setApiError("");
 
     if (!selectedCourse) {
-      setApiError("Please select a course.");
+      setApiError(
+        "Please select a course."
+      );
+      return;
+    }
+
+    // ==========================================
+    // VALIDATE DURATION
+    // ==========================================
+
+    const durationMinutes =
+      Number(duration);
+
+    if (
+      !Number.isInteger(
+        durationMinutes
+      ) ||
+      durationMinutes < 1
+    ) {
+      setApiError(
+        "Please enter a valid attendance duration in minutes."
+      );
       return;
     }
 
@@ -299,7 +498,9 @@ function StartAttendance() {
         permission
       );
 
-      if (permission === "denied") {
+      if (
+        permission === "denied"
+      ) {
         setApiError(
           "Location permission is blocked for this website. Please allow Location permission in your browser/site settings, then reload the page and try again."
         );
@@ -321,8 +522,12 @@ function StartAttendance() {
       try {
         locationData =
           await getLecturerLocation();
-      } catch (locationError) {
-        setGettingLocation(false);
+      } catch (
+        locationError
+      ) {
+        setGettingLocation(
+          false
+        );
 
         setApiError(
           locationError.message ||
@@ -339,8 +544,12 @@ function StartAttendance() {
       // -----------------------------------------------------
       if (
         !locationData ||
-        !Number.isFinite(locationData.latitude) ||
-        !Number.isFinite(locationData.longitude)
+        !Number.isFinite(
+          locationData.latitude
+        ) ||
+        !Number.isFinite(
+          locationData.longitude
+        )
       ) {
         setApiError(
           "A valid lecturer location could not be detected."
@@ -361,38 +570,44 @@ function StartAttendance() {
         "Location detected. Starting attendance session..."
       );
 
-      const response = await fetch(
-        `${API_URL}/api/attendance-sessions/start`,
-        {
-          method: "POST",
+      const response =
+        await fetch(
+          `${API_URL}/api/attendance-sessions/start`,
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type": "application/json",
+            headers: {
+              "Content-Type":
+                "application/json",
 
-            Authorization: `Bearer ${localStorage.getItem(
-              "token"
-            )}`,
-          },
+              Authorization: `Bearer ${localStorage.getItem(
+                "token"
+              )}`,
+            },
 
-          body: JSON.stringify({
-            courseAssignmentId: selectedCourse,
+            body: JSON.stringify({
+              courseAssignmentId:
+                selectedCourse,
 
-            duration: Number(duration),
+              // Lecturer-entered duration
+              duration:
+                durationMinutes,
 
-            // Lecturer GPS
-            lecturerLatitude:
-              locationData.latitude,
+              // Lecturer GPS
+              lecturerLatitude:
+                locationData.latitude,
 
-            lecturerLongitude:
-              locationData.longitude,
+              lecturerLongitude:
+                locationData.longitude,
 
-            lecturerAccuracy:
-              locationData.accuracy,
-          }),
-        }
-      );
+              lecturerAccuracy:
+                locationData.accuracy,
+            }),
+          }
+        );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         setApiError(
@@ -406,7 +621,9 @@ function StartAttendance() {
       // -----------------------------------------------------
       // STEP 5: Session successfully created
       // -----------------------------------------------------
-      setSession(data.session || data);
+      setSession(
+        data.session || data
+      );
 
       setApiError("");
     } catch (error) {
@@ -415,7 +632,9 @@ function StartAttendance() {
         error
       );
 
-      setGettingLocation(false);
+      setGettingLocation(
+        false
+      );
 
       setApiError(
         error.message ||
@@ -425,7 +644,7 @@ function StartAttendance() {
   }
 
   // ---------------------------------------------------------
-  // STOP ATTENDANCE
+  // STOP ATTENDANCE MANUALLY
   // ---------------------------------------------------------
   async function stopAttendance() {
     if (!session?._id) {
@@ -435,20 +654,22 @@ function StartAttendance() {
     try {
       setApiError("");
 
-      const response = await fetch(
-        `${API_URL}/api/attendance-sessions/close/${session._id}`,
-        {
-          method: "PUT",
+      const response =
+        await fetch(
+          `${API_URL}/api/attendance-sessions/close/${session._id}`,
+          {
+            method: "PUT",
 
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem(
-              "token"
-            )}`,
-          },
-        }
-      );
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem(
+                "token"
+              )}`,
+            },
+          }
+        );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         setApiError(
@@ -466,6 +687,7 @@ function StartAttendance() {
       setSession(null);
       setQrSrc("");
       setQrError("");
+      setRemainingSeconds(null);
       setSelectedCourse("");
       setLecturerLocation(null);
     } catch (error) {
@@ -496,26 +718,40 @@ function StartAttendance() {
             <FaQrcode />
           </div>
 
-          <h2>Create Attendance Session</h2>
+          <h2>
+            Create Attendance Session
+          </h2>
 
           <p>
-            Select one of your assigned courses and
-            generate an attendance QR code.
+            Select one of your assigned
+            courses and set the attendance
+            duration.
           </p>
 
-          <form onSubmit={handleGenerateQR}>
+          <form
+            onSubmit={
+              handleGenerateQR
+            }
+          >
             {/* COURSE */}
             <div className="form-group">
-              <label>Course</label>
+              <label>
+                Course
+              </label>
 
               <select
-                value={selectedCourse}
+                value={
+                  selectedCourse
+                }
                 onChange={(e) =>
-                  setSelectedCourse(e.target.value)
+                  setSelectedCourse(
+                    e.target.value
+                  )
                 }
                 disabled={
                   loading ||
-                  courses.length === 0 ||
+                  courses.length ===
+                    0 ||
                   !!session ||
                   gettingLocation
                 }
@@ -523,60 +759,98 @@ function StartAttendance() {
                 <option value="">
                   {loading
                     ? "Loading courses..."
-                    : courses.length === 0
+                    : courses.length ===
+                      0
                     ? "No assigned courses"
                     : "Select Course"}
                 </option>
 
-                {courses.map((assignment) => (
-                  <option
-                    key={assignment._id}
-                    value={assignment._id}
-                  >
-                    {assignment.course?.courseName ||
-                      "Course"}{" "}
-                    (
-                    {assignment.course?.courseCode ||
-                      "N/A"}
-                    ) -{" "}
-                    {assignment.semester ||
-                      "Semester"}
-                  </option>
-                ))}
+                {courses.map(
+                  (assignment) => (
+                    <option
+                      key={
+                        assignment._id
+                      }
+                      value={
+                        assignment._id
+                      }
+                    >
+                      {assignment
+                        .course
+                        ?.courseName ||
+                        "Course"}{" "}
+                      (
+                      {assignment
+                        .course
+                        ?.courseCode ||
+                        "N/A"}
+                      ) -{" "}
+                      {assignment.semester ||
+                        "Semester"}
+                    </option>
+                  )
+                )}
               </select>
             </div>
 
             {/* DURATION */}
             <div className="form-group">
               <label>
-                <FaClock /> QR Expiry Time
+                <FaClock /> Attendance
+                Duration
               </label>
 
-              <select
-                value={duration}
-                onChange={(e) =>
-                  setDuration(e.target.value)
-                }
-                disabled={
-                  !!session || gettingLocation
-                }
+              <div
+                style={{
+                  display: "flex",
+                  alignItems:
+                    "center",
+                  gap: "10px",
+                }}
               >
-                <option value="5">
-                  5 minutes
-                </option>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={
+                    duration
+                  }
+                  onChange={(e) =>
+                    setDuration(
+                      e.target.value
+                    )
+                  }
+                  disabled={
+                    !!session ||
+                    gettingLocation
+                  }
+                  placeholder="Enter minutes"
+                />
 
-                <option value="10">
-                  10 minutes
-                </option>
+                <span
+                  style={{
+                    fontSize:
+                      "14px",
+                  }}
+                >
+                  minutes
+                </span>
+              </div>
 
-                <option value="15">
-                  15 minutes
-                </option>
-
-                <option value="30">
-                  30 minutes
-                </option>
-              </select>
+              <small
+                style={{
+                  display:
+                    "block",
+                  marginTop:
+                    "6px",
+                  color: "#666",
+                }}
+              >
+                Enter how many
+                minutes the
+                attendance should
+                remain open.
+              </small>
             </div>
 
             {/* GPS STATUS */}
@@ -591,17 +865,17 @@ function StartAttendance() {
                   border:
                     "1px solid #d8e5ff",
                   display: "flex",
-                  alignItems: "center",
+                  alignItems:
+                    "center",
                   gap: "10px",
                 }}
               >
-                <FaSpinner
-                  className="gps-spinner"
-                />
+                <FaSpinner className="gps-spinner" />
 
                 <div>
                   <strong>
-                    Detecting your location...
+                    Detecting your
+                    location...
                   </strong>
 
                   <p
@@ -612,9 +886,11 @@ function StartAttendance() {
                         "13px",
                     }}
                   >
-                    Please allow location
-                    permission if your
-                    browser asks.
+                    Please allow
+                    location
+                    permission if
+                    your browser
+                    asks.
                   </p>
                 </div>
               </div>
@@ -649,7 +925,8 @@ function StartAttendance() {
                     <FaCheckCircle />
 
                     <strong>
-                      Location detected
+                      Location
+                      detected
                     </strong>
                   </div>
 
@@ -676,7 +953,8 @@ function StartAttendance() {
                     </div>
 
                     <div>
-                      Accuracy: ±
+                      Accuracy:
+                      ±
                       {lecturerLocation.accuracy
                         ? lecturerLocation.accuracy.toFixed(
                             1
@@ -691,7 +969,9 @@ function StartAttendance() {
             {/* ERROR / STATUS */}
             {apiError && (
               <div className="error-text">
-                <p>{apiError}</p>
+                <p>
+                  {apiError}
+                </p>
               </div>
             )}
 
@@ -723,6 +1003,68 @@ function StartAttendance() {
                       "Active"}
                   </strong>
                 </p>
+
+                {/* COUNTDOWN */}
+                {remainingSeconds !==
+                    null && (
+                  <div
+                    style={{
+                      marginTop:
+                        "15px",
+                      padding:
+                        "14px",
+                      borderRadius:
+                        "10px",
+                      background:
+                        "#fff8e6",
+                      border:
+                        "1px solid #f2d58a",
+                      textAlign:
+                        "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display:
+                          "flex",
+                        justifyContent:
+                          "center",
+                        alignItems:
+                          "center",
+                        gap: "8px",
+                        marginBottom:
+                          "5px",
+                      }}
+                    >
+                      <FaClock />
+
+                      <strong>
+                        Time Remaining
+                      </strong>
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize:
+                          "24px",
+                        fontWeight:
+                          "700",
+                      }}
+                    >
+                      {formatRemainingTime(
+                        remainingSeconds
+                      )}
+                    </div>
+
+                    <small>
+                      Attendance will
+                      automatically
+                      close when the
+                      timer reaches
+                      zero.
+                    </small>
+                  </div>
+                )}
 
                 {/* Lecturer GPS used for this session */}
                 {session.lecturerLatitude !==
@@ -757,7 +1099,8 @@ function StartAttendance() {
                         <FaMapMarkerAlt />
 
                         <strong>
-                          Lecturer Location
+                          Lecturer
+                          Location
                         </strong>
                       </div>
 
@@ -765,14 +1108,18 @@ function StartAttendance() {
                         Latitude:{" "}
                         {Number(
                           session.lecturerLatitude
-                        ).toFixed(6)}
+                        ).toFixed(
+                          6
+                        )}
                       </div>
 
                       <div>
                         Longitude:{" "}
                         {Number(
                           session.lecturerLongitude
-                        ).toFixed(6)}
+                        ).toFixed(
+                          6
+                        )}
                       </div>
                     </div>
                   )}
@@ -809,12 +1156,14 @@ function StartAttendance() {
                 {gettingLocation ? (
                   <>
                     <FaSpinner className="gps-spinner" />
-                    Detecting Location...
+                    Detecting
+                    Location...
                   </>
                 ) : (
                   <>
                     <FaMapMarkerAlt />
-                    Generate QR Code
+                    Generate QR
+                    Code
                   </>
                 )}
               </button>
