@@ -395,11 +395,7 @@ function ScanQR() {
         calculatedDistance
       );
 
-      setMessage(
-        `Attendance recorded successfully! You are ${calculatedDistance.toFixed(
-          1
-        )} meters from the lecturer.`
-      );
+     setMessage("Attendance recorded successfully!👌👌👌");
 
       setMessageType("success");
     } catch (error) {
