@@ -13,7 +13,7 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
 import API_URL from "../../config/api";
 
-import "../../styles/dashboard.css";
+import "../../styles/Dashboard.css";
 import "../../styles/attendanceHistory.css";
 
 function AttendanceHistory() {
