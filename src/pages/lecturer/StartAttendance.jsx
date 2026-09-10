@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
+
 import { useLocation } from "react-router-dom";
 
-import { FaQrcode, FaClock } from "react-icons/fa";
+import {
+  FaQrcode,
+  FaClock,
+  FaMapMarkerAlt,
+  FaSpinner,
+  FaCheckCircle,
+} from "react-icons/fa";
 
 import QRCode from "qrcode";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
+
 import PageHeader from "../../components/PageHeader";
 
 import API_URL from "../../config/api";
@@ -14,14 +22,20 @@ import "../../styles/generateQR.css";
 
 function StartAttendance() {
   const location = useLocation();
+
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState("");
   const [duration, setDuration] = useState("15");
+
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
   const [qrSrc, setQrSrc] = useState("");
   const [qrError, setQrError] = useState("");
   const [apiError, setApiError] = useState("");
+
+  // GPS states
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [lecturerLocation, setLecturerLocation] = useState(null);
 
   useEffect(() => {
     loadCourses();
@@ -33,6 +47,9 @@ function StartAttendance() {
     }
   }, [location.state]);
 
+  // ---------------------------------------------------------
+  // Generate QR code when session is available
+  // ---------------------------------------------------------
   useEffect(() => {
     if (!session) {
       setQrSrc("");
@@ -61,11 +78,15 @@ function StartAttendance() {
       })
       .catch((error) => {
         console.error("QR code generation failed:", error);
+
         setQrSrc("");
         setQrError("QR code generation failed.");
       });
   }, [session]);
 
+  // ---------------------------------------------------------
+  // Load lecturer assigned courses
+  // ---------------------------------------------------------
   async function loadCourses() {
     try {
       setLoading(true);
@@ -73,35 +94,192 @@ function StartAttendance() {
 
       const user = (() => {
         try {
-          return JSON.parse(localStorage.getItem("user") || "null");
+          return JSON.parse(
+            localStorage.getItem("user") || "null"
+          );
         } catch {
           return null;
         }
       })();
 
       if (!user?.id) {
-        throw new Error("Lecturer account information was not found.");
+        throw new Error(
+          "Lecturer account information was not found."
+        );
       }
 
-      const response = await fetch(`${API_URL}/api/course-assignments/lecturer/${user.id}`);
+      const response = await fetch(
+        `${API_URL}/api/course-assignments/lecturer/${user.id}`
+      );
+
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to load assigned courses.");
+        throw new Error(
+          data.message ||
+            "Failed to load assigned courses."
+        );
       }
 
       setCourses(data.assignments || []);
     } catch (error) {
-      console.error("Error loading assigned courses:", error);
+      console.error(
+        "Error loading assigned courses:",
+        error
+      );
+
       setCourses([]);
-      setApiError(error.message || "Unable to load assigned courses.");
+
+      setApiError(
+        error.message ||
+          "Unable to load assigned courses."
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  // ---------------------------------------------------------
+  // GET LECTURER GPS LOCATION
+  // ---------------------------------------------------------
+  function getLecturerLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(
+          new Error(
+            "GPS is not supported by this browser or device."
+          )
+        );
+
+        return;
+      }
+
+      setGettingLocation(true);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setGettingLocation(false);
+
+          const latitude =
+            position.coords.latitude;
+
+          const longitude =
+            position.coords.longitude;
+
+          const accuracy =
+            position.coords.accuracy;
+
+          // Make sure coordinates are valid
+          if (
+            !Number.isFinite(latitude) ||
+            !Number.isFinite(longitude)
+          ) {
+            reject(
+              new Error(
+                "The browser returned an invalid GPS location."
+              )
+            );
+
+            return;
+          }
+
+          const locationData = {
+            latitude,
+            longitude,
+            accuracy,
+          };
+
+          setLecturerLocation(locationData);
+
+          console.log(
+            "Lecturer GPS location:",
+            locationData
+          );
+
+          resolve(locationData);
+        },
+
+        (error) => {
+          setGettingLocation(false);
+
+          console.error(
+            "Lecturer GPS error:",
+            error
+          );
+
+          let errorMessage =
+            "Unable to detect your location.";
+
+          // Permission denied
+          if (error.code === 1) {
+            errorMessage =
+              "Location permission was denied. Please allow location access in your browser settings and try again.";
+          }
+
+          // Position unavailable
+          else if (error.code === 2) {
+            errorMessage =
+              "Your location could not be detected. Please turn on Location/GPS on your device and try again.";
+          }
+
+          // Timeout
+          else if (error.code === 3) {
+            errorMessage =
+              "Location detection timed out. Please make sure Location/GPS is enabled and try again.";
+          }
+
+          reject(new Error(errorMessage));
+        },
+
+        {
+          enableHighAccuracy: true,
+          timeout: 30000,
+          maximumAge: 0,
+        }
+      );
+    });
+  }
+
+  // ---------------------------------------------------------
+  // Check browser location permission
+  // ---------------------------------------------------------
+  async function checkLocationPermission() {
+    // Some browsers support the Permissions API.
+    // Some browsers/devices do not, so we safely ignore
+    // errors and allow getCurrentPosition() to request it.
+
+    if (!navigator.permissions) {
+      return "unknown";
+    }
+
+    try {
+      const permission =
+        await navigator.permissions.query({
+          name: "geolocation",
+        });
+
+      console.log(
+        "Location permission:",
+        permission.state
+      );
+
+      return permission.state;
+    } catch (error) {
+      console.log(
+        "Location permission status unavailable:",
+        error
+      );
+
+      return "unknown";
+    }
+  }
+
+  // ---------------------------------------------------------
+  // GENERATE ATTENDANCE QR
+  // ---------------------------------------------------------
   async function handleGenerateQR(e) {
     e.preventDefault();
+
     setApiError("");
 
     if (!selectedCourse) {
@@ -110,33 +288,145 @@ function StartAttendance() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/attendance-sessions/start`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          courseAssignmentId: selectedCourse,
-          duration: Number(duration),
-        }),
-      });
+      // -----------------------------------------------------
+      // STEP 1: Check location permission
+      // -----------------------------------------------------
+      const permission =
+        await checkLocationPermission();
+
+      console.log(
+        "Current browser location permission:",
+        permission
+      );
+
+      if (permission === "denied") {
+        setApiError(
+          "Location permission is blocked for this website. Please allow Location permission in your browser/site settings, then reload the page and try again."
+        );
+
+        return;
+      }
+
+      // -----------------------------------------------------
+      // STEP 2: Get lecturer's current GPS
+      // -----------------------------------------------------
+      setGettingLocation(true);
+
+      setApiError(
+        "Detecting your current location. Please allow location access if your browser asks..."
+      );
+
+      let locationData;
+
+      try {
+        locationData =
+          await getLecturerLocation();
+      } catch (locationError) {
+        setGettingLocation(false);
+
+        setApiError(
+          locationError.message ||
+            "Unable to detect your location."
+        );
+
+        return;
+      }
+
+      setGettingLocation(false);
+
+      // -----------------------------------------------------
+      // STEP 3: Validate GPS
+      // -----------------------------------------------------
+      if (
+        !locationData ||
+        !Number.isFinite(locationData.latitude) ||
+        !Number.isFinite(locationData.longitude)
+      ) {
+        setApiError(
+          "A valid lecturer location could not be detected."
+        );
+
+        return;
+      }
+
+      console.log(
+        "Valid lecturer location:",
+        locationData
+      );
+
+      // -----------------------------------------------------
+      // STEP 4: Start attendance session
+      // -----------------------------------------------------
+      setApiError(
+        "Location detected. Starting attendance session..."
+      );
+
+      const response = await fetch(
+        `${API_URL}/api/attendance-sessions/start`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+
+            Authorization: `Bearer ${localStorage.getItem(
+              "token"
+            )}`,
+          },
+
+          body: JSON.stringify({
+            courseAssignmentId: selectedCourse,
+
+            duration: Number(duration),
+
+            // Lecturer GPS
+            lecturerLatitude:
+              locationData.latitude,
+
+            lecturerLongitude:
+              locationData.longitude,
+
+            lecturerAccuracy:
+              locationData.accuracy,
+          }),
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        setApiError(data.message || "Failed to start attendance session.");
+        setApiError(
+          data.message ||
+            "Failed to start attendance session."
+        );
+
         return;
       }
 
+      // -----------------------------------------------------
+      // STEP 5: Session successfully created
+      // -----------------------------------------------------
       setSession(data.session || data);
+
       setApiError("");
     } catch (error) {
-      console.error("Generate QR error:", error);
-      setApiError("Unable to connect to the server.");
+      console.error(
+        "Generate QR error:",
+        error
+      );
+
+      setGettingLocation(false);
+
+      setApiError(
+        error.message ||
+          "Unable to connect to the server."
+      );
     }
   }
 
+  // ---------------------------------------------------------
+  // STOP ATTENDANCE
+  // ---------------------------------------------------------
   async function stopAttendance() {
     if (!session?._id) {
       return;
@@ -145,33 +435,56 @@ function StartAttendance() {
     try {
       setApiError("");
 
-      const response = await fetch(`${API_URL}/api/attendance-sessions/close/${session._id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await fetch(
+        `${API_URL}/api/attendance-sessions/close/${session._id}`,
+        {
+          method: "PUT",
+
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem(
+              "token"
+            )}`,
+          },
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        setApiError(data.message || "Failed to close attendance.");
+        setApiError(
+          data.message ||
+            "Failed to close attendance."
+        );
+
         return;
       }
 
-      alert("Attendance Closed Successfully");
+      alert(
+        "Attendance Closed Successfully"
+      );
+
       setSession(null);
       setQrSrc("");
       setQrError("");
       setSelectedCourse("");
+      setLecturerLocation(null);
     } catch (error) {
-      console.error("Stop attendance error:", error);
-      setApiError("Unable to connect to the server.");
+      console.error(
+        "Stop attendance error:",
+        error
+      );
+
+      setApiError(
+        "Unable to connect to the server."
+      );
     }
   }
 
   return (
-    <DashboardLayout title="Generate QR Code" role="lecturer">
+    <DashboardLayout
+      title="Generate QR Code"
+      role="lecturer"
+    >
       <PageHeader
         title="Generate Attendance QR Code"
         subtitle="Create a temporary QR code for students to mark attendance."
@@ -184,77 +497,326 @@ function StartAttendance() {
           </div>
 
           <h2>Create Attendance Session</h2>
-          <p>Select one of your assigned courses and generate an attendance QR code.</p>
+
+          <p>
+            Select one of your assigned courses and
+            generate an attendance QR code.
+          </p>
 
           <form onSubmit={handleGenerateQR}>
+            {/* COURSE */}
             <div className="form-group">
               <label>Course</label>
 
               <select
                 value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
-                disabled={loading || courses.length === 0 || !!session}
+                onChange={(e) =>
+                  setSelectedCourse(e.target.value)
+                }
+                disabled={
+                  loading ||
+                  courses.length === 0 ||
+                  !!session ||
+                  gettingLocation
+                }
               >
                 <option value="">
                   {loading
                     ? "Loading courses..."
                     : courses.length === 0
-                      ? "No assigned courses"
-                      : "Select Course"}
+                    ? "No assigned courses"
+                    : "Select Course"}
                 </option>
 
                 {courses.map((assignment) => (
-                  <option key={assignment._id} value={assignment._id}>
-                    {assignment.course?.courseName || "Course"} ({assignment.course?.courseCode || "N/A"}) - {assignment.semester || "Semester"}
+                  <option
+                    key={assignment._id}
+                    value={assignment._id}
+                  >
+                    {assignment.course?.courseName ||
+                      "Course"}{" "}
+                    (
+                    {assignment.course?.courseCode ||
+                      "N/A"}
+                    ) -{" "}
+                    {assignment.semester ||
+                      "Semester"}
                   </option>
                 ))}
               </select>
             </div>
 
+            {/* DURATION */}
             <div className="form-group">
               <label>
                 <FaClock /> QR Expiry Time
               </label>
 
-              <select value={duration} onChange={(e) => setDuration(e.target.value)} disabled={!!session}>
-                <option value="5">5 minutes</option>
-                <option value="10">10 minutes</option>
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
+              <select
+                value={duration}
+                onChange={(e) =>
+                  setDuration(e.target.value)
+                }
+                disabled={
+                  !!session || gettingLocation
+                }
+              >
+                <option value="5">
+                  5 minutes
+                </option>
+
+                <option value="10">
+                  10 minutes
+                </option>
+
+                <option value="15">
+                  15 minutes
+                </option>
+
+                <option value="30">
+                  30 minutes
+                </option>
               </select>
             </div>
 
+            {/* GPS STATUS */}
+            {gettingLocation && (
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "15px",
+                  borderRadius: "10px",
+                  background:
+                    "#f3f7ff",
+                  border:
+                    "1px solid #d8e5ff",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                }}
+              >
+                <FaSpinner
+                  className="gps-spinner"
+                />
+
+                <div>
+                  <strong>
+                    Detecting your location...
+                  </strong>
+
+                  <p
+                    style={{
+                      margin:
+                        "5px 0 0",
+                      fontSize:
+                        "13px",
+                    }}
+                  >
+                    Please allow location
+                    permission if your
+                    browser asks.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* GPS SUCCESS */}
+            {lecturerLocation &&
+              !gettingLocation &&
+              !session && (
+                <div
+                  style={{
+                    marginTop: "15px",
+                    padding: "15px",
+                    borderRadius: "10px",
+                    background:
+                      "#f0fff4",
+                    border:
+                      "1px solid #b7ebc6",
+                  }}
+                >
+                  <div
+                    style={{
+                      display:
+                        "flex",
+                      alignItems:
+                        "center",
+                      gap: "8px",
+                      marginBottom:
+                        "8px",
+                    }}
+                  >
+                    <FaCheckCircle />
+
+                    <strong>
+                      Location detected
+                    </strong>
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize:
+                        "13px",
+                      lineHeight:
+                        "1.7",
+                    }}
+                  >
+                    <div>
+                      Latitude:{" "}
+                      {lecturerLocation.latitude.toFixed(
+                        6
+                      )}
+                    </div>
+
+                    <div>
+                      Longitude:{" "}
+                      {lecturerLocation.longitude.toFixed(
+                        6
+                      )}
+                    </div>
+
+                    <div>
+                      Accuracy: ±
+                      {lecturerLocation.accuracy
+                        ? lecturerLocation.accuracy.toFixed(
+                            1
+                          )
+                        : "N/A"}{" "}
+                      m
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* ERROR / STATUS */}
             {apiError && (
               <div className="error-text">
                 <p>{apiError}</p>
               </div>
             )}
 
+            {/* QR DISPLAY */}
             {session && (
               <div className="qr-display">
-                <h2>Attendance QR Code</h2>
+                <h2>
+                  Attendance QR Code
+                </h2>
 
                 {qrSrc ? (
-                  <img src={qrSrc} alt="Attendance QR Code" width={250} height={250} />
+                  <img
+                    src={qrSrc}
+                    alt="Attendance QR Code"
+                    width={250}
+                    height={250}
+                  />
                 ) : (
-                  <p>{qrError || "Generating QR code..."}</p>
+                  <p>
+                    {qrError ||
+                      "Generating QR code..."}
+                  </p>
                 )}
 
                 <p>
-                  Status: <strong>{session.status || "Active"}</strong>
+                  Status:{" "}
+                  <strong>
+                    {session.status ||
+                      "Active"}
+                  </strong>
                 </p>
 
-                {qrError && <p className="error-text">{qrError}</p>}
+                {/* Lecturer GPS used for this session */}
+                {session.lecturerLatitude !==
+                    undefined &&
+                  session.lecturerLongitude !==
+                    undefined && (
+                    <div
+                      style={{
+                        marginTop:
+                          "15px",
+                        padding:
+                          "12px",
+                        borderRadius:
+                          "8px",
+                        background:
+                          "#f5f5f5",
+                        fontSize:
+                          "13px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display:
+                            "flex",
+                          alignItems:
+                            "center",
+                          gap: "7px",
+                          marginBottom:
+                            "5px",
+                        }}
+                      >
+                        <FaMapMarkerAlt />
+
+                        <strong>
+                          Lecturer Location
+                        </strong>
+                      </div>
+
+                      <div>
+                        Latitude:{" "}
+                        {Number(
+                          session.lecturerLatitude
+                        ).toFixed(6)}
+                      </div>
+
+                      <div>
+                        Longitude:{" "}
+                        {Number(
+                          session.lecturerLongitude
+                        ).toFixed(6)}
+                      </div>
+                    </div>
+                  )}
+
+                {qrError && (
+                  <p className="error-text">
+                    {qrError}
+                  </p>
+                )}
               </div>
             )}
 
+            {/* BUTTON */}
             {session ? (
-              <button type="button" className="generate-qr-btn" onClick={stopAttendance}>
+              <button
+                type="button"
+                className="generate-qr-btn"
+                onClick={
+                  stopAttendance
+                }
+              >
                 Stop Attendance
               </button>
             ) : (
-              <button type="submit" className="generate-qr-btn" disabled={loading || !selectedCourse}>
-                <FaQrcode /> Generate QR Code
+              <button
+                type="submit"
+                className="generate-qr-btn"
+                disabled={
+                  loading ||
+                  !selectedCourse ||
+                  gettingLocation
+                }
+              >
+                {gettingLocation ? (
+                  <>
+                    <FaSpinner className="gps-spinner" />
+                    Detecting Location...
+                  </>
+                ) : (
+                  <>
+                    <FaMapMarkerAlt />
+                    Generate QR Code
+                  </>
+                )}
               </button>
             )}
           </form>

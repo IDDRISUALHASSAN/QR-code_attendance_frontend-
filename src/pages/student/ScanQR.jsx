@@ -33,6 +33,67 @@ function ScanQR() {
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
   // ---------------------------------------------------------
+  // Check browser location permission
+  // ---------------------------------------------------------
+  const checkLocationPermission = async () => {
+    if (!navigator.geolocation) {
+      return {
+        allowed: false,
+        message:
+          "Geolocation is not supported by this browser.",
+      };
+    }
+
+    // Some browsers may not support the Permissions API.
+    if (!navigator.permissions?.query) {
+      return {
+        allowed: true,
+        permission: "unknown",
+      };
+    }
+
+    try {
+      const permission = await navigator.permissions.query({
+        name: "geolocation",
+      });
+
+      if (permission.state === "denied") {
+        return {
+          allowed: false,
+          permission: "denied",
+          message:
+            "Location permission is blocked for this website. Please allow location access in your browser settings and try again.",
+        };
+      }
+
+      if (permission.state === "granted") {
+        return {
+          allowed: true,
+          permission: "granted",
+        };
+      }
+
+      // "prompt"
+      return {
+        allowed: true,
+        permission: "prompt",
+      };
+    } catch (error) {
+      console.warn(
+        "Unable to check location permission:",
+        error
+      );
+
+      // If permission checking is unavailable,
+      // let getCurrentPosition() request it normally.
+      return {
+        allowed: true,
+        permission: "unknown",
+      };
+    }
+  };
+
+  // ---------------------------------------------------------
   // Calculate distance between two GPS coordinates
   // ---------------------------------------------------------
   const calculateDistance = (
@@ -41,7 +102,7 @@ function ScanQR() {
     lecturerLatitude,
     lecturerLongitude
   ) => {
-    const earthRadius = 6371000; // meters
+    const earthRadius = 6371000;
 
     const lat1 = (studentLatitude * Math.PI) / 180;
     const lat2 = (lecturerLatitude * Math.PI) / 180;
@@ -59,7 +120,8 @@ function ScanQR() {
         Math.sin(deltaLon / 2) *
         Math.sin(deltaLon / 2);
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const c =
+      2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return earthRadius * c;
   };
@@ -67,19 +129,26 @@ function ScanQR() {
   // ---------------------------------------------------------
   // Get student's current GPS location
   // ---------------------------------------------------------
-  const getStudentLocation = () => {
+  const getStudentLocation = async () => {
+    if (!navigator.geolocation) {
+      throw new Error(
+        "Geolocation is not supported by this browser."
+      );
+    }
+
+    // Check permission before requesting GPS.
+    const permission = await checkLocationPermission();
+
+    if (!permission.allowed) {
+      throw new Error(
+        permission.message ||
+          "Location permission is not available."
+      );
+    }
+
+    setGettingLocation(true);
+
     return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(
-          new Error(
-            "Geolocation is not supported by this browser."
-          )
-        );
-        return;
-      }
-
-      setGettingLocation(true);
-
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setGettingLocation(false);
@@ -90,10 +159,24 @@ function ScanQR() {
             accuracy: position.coords.accuracy,
           };
 
+          // Validate coordinates.
+          if (
+            !Number.isFinite(location.latitude) ||
+            !Number.isFinite(location.longitude)
+          ) {
+            reject(
+              new Error(
+                "Your browser returned an invalid location. Please try again."
+              )
+            );
+            return;
+          }
+
           setStudentLocation(location);
 
           resolve(location);
         },
+
         (error) => {
           setGettingLocation(false);
 
@@ -102,20 +185,23 @@ function ScanQR() {
 
           if (error.code === error.PERMISSION_DENIED) {
             errorMessage =
-              "Location permission was denied. Please allow location access and try again.";
-          } else if (error.code === error.POSITION_UNAVAILABLE) {
+              "Location permission was denied. Please allow location access for this website and try again.";
+          } else if (
+            error.code === error.POSITION_UNAVAILABLE
+          ) {
             errorMessage =
-              "Your current location could not be determined. Please try again.";
+              "Your current location could not be determined. Please make sure your device location/GPS is turned on and try again.";
           } else if (error.code === error.TIMEOUT) {
             errorMessage =
-              "Getting your location took too long. Please try again.";
+              "Getting your location took too long. Please make sure GPS/location services are enabled and try again.";
           }
 
           reject(new Error(errorMessage));
         },
+
         {
           enableHighAccuracy: true,
-          timeout: 15000,
+          timeout: 30000,
           maximumAge: 0,
         }
       );
@@ -143,7 +229,8 @@ function ScanQR() {
 
     if (!response.ok) {
       throw new Error(
-        data.message || "Unable to retrieve attendance session."
+        data.message ||
+          "Unable to retrieve attendance session."
       );
     }
 
@@ -183,7 +270,8 @@ function ScanQR() {
 
     if (!response.ok) {
       throw new Error(
-        data.message || "Unable to record attendance."
+        data.message ||
+          "Unable to record attendance."
       );
     }
 
@@ -202,24 +290,41 @@ function ScanQR() {
     setLoading(true);
 
     try {
-      // Stop camera immediately after successful scan
+      // Stop camera immediately after successful scan.
       await stopScanner();
 
+      setMessage("Checking location permission...");
+      setMessageType("info");
+
+      // -----------------------------------------------------
+      // 1. Check location permission
+      // -----------------------------------------------------
+      const permission = await checkLocationPermission();
+
+      if (!permission.allowed) {
+        throw new Error(
+          permission.message ||
+            "Location permission is required to mark attendance."
+        );
+      }
+
+      // -----------------------------------------------------
+      // 2. Get student's GPS
+      // -----------------------------------------------------
       setMessage("Getting your current location...");
       setMessageType("info");
 
-      // -----------------------------------------------------
-      // 1. Get student's GPS
-      // -----------------------------------------------------
       const location = await getStudentLocation();
 
-      setMessage("Checking your location...");
+      // -----------------------------------------------------
+      // 3. Get attendance session
+      // -----------------------------------------------------
+      setMessage("Checking attendance session...");
       setMessageType("info");
 
-      // -----------------------------------------------------
-      // 2. Get attendance session from backend
-      // -----------------------------------------------------
-      const session = await getAttendanceSession(decodedText);
+      const session = await getAttendanceSession(
+        decodedText
+      );
 
       if (!session) {
         throw new Error(
@@ -228,7 +333,7 @@ function ScanQR() {
       }
 
       // -----------------------------------------------------
-      // 3. Get lecturer GPS stored in the session
+      // 4. Get lecturer GPS
       // -----------------------------------------------------
       const lecturerLatitude = Number(
         session.lecturerLatitude
@@ -248,8 +353,11 @@ function ScanQR() {
       }
 
       // -----------------------------------------------------
-      // 4. Calculate distance
+      // 5. Calculate distance
       // -----------------------------------------------------
+      setMessage("Checking your distance from the lecturer...");
+      setMessageType("info");
+
       const calculatedDistance = calculateDistance(
         location.latitude,
         location.longitude,
@@ -260,7 +368,7 @@ function ScanQR() {
       setDistance(calculatedDistance);
 
       // -----------------------------------------------------
-      // 5. Check 50-meter radius
+      // 6. Check 50-meter radius
       // -----------------------------------------------------
       if (calculatedDistance > ALLOWED_RADIUS) {
         setMessage(
@@ -274,9 +382,11 @@ function ScanQR() {
       }
 
       // -----------------------------------------------------
-      // 6. Record attendance
+      // 7. Record attendance
       // -----------------------------------------------------
-      setMessage("Location verified. Recording attendance...");
+      setMessage(
+        "Location verified. Recording attendance..."
+      );
       setMessageType("info");
 
       await recordAttendance(
@@ -311,7 +421,7 @@ function ScanQR() {
   // Start QR scanner
   // ---------------------------------------------------------
   const startScanner = async () => {
-    if (scanning) {
+    if (scanning || loading) {
       return;
     }
 
@@ -320,6 +430,13 @@ function ScanQR() {
     setDistance(null);
 
     try {
+      // Check camera support.
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error(
+          "Camera access is not supported by this browser."
+        );
+      }
+
       const scanner = new Html5Qrcode("qr-reader");
 
       scannerRef.current = scanner;
@@ -343,7 +460,10 @@ function ScanQR() {
 
       setScanning(true);
     } catch (error) {
-      console.error("Unable to start QR scanner:", error);
+      console.error(
+        "Unable to start QR scanner:",
+        error
+      );
 
       setMessage(
         "Unable to access the camera. Please allow camera permission and try again."
@@ -373,7 +493,10 @@ function ScanQR() {
 
       scanner.clear();
     } catch (error) {
-      console.error("Error stopping scanner:", error);
+      console.error(
+        "Error stopping scanner:",
+        error
+      );
     } finally {
       scannerRef.current = null;
       setScanning(false);
@@ -413,10 +536,9 @@ function ScanQR() {
       />
 
       <div className="scan-qr-page">
-        {/* -------------------------------------------------
-            Scanner Card
-        -------------------------------------------------- */}
         <div className="scan-card">
+
+          {/* Scanner Header */}
           <div className="scan-card-header">
             <div className="scan-icon">
               <FaQrcode />
@@ -424,23 +546,20 @@ function ScanQR() {
 
             <div>
               <h2>Attendance Scanner</h2>
+
               <p>
                 Scan the QR code displayed by your lecturer.
               </p>
             </div>
           </div>
 
-          {/* -------------------------------------------------
-              QR Reader
-          -------------------------------------------------- */}
+          {/* QR Reader */}
           <div
             id="qr-reader"
             className="qr-reader"
           ></div>
 
-          {/* -------------------------------------------------
-              Status Message
-          -------------------------------------------------- */}
+          {/* Status Message */}
           {message && (
             <div
               className={`scan-message ${messageType}`}
@@ -461,9 +580,7 @@ function ScanQR() {
             </div>
           )}
 
-          {/* -------------------------------------------------
-              GPS Information
-          -------------------------------------------------- */}
+          {/* GPS Information */}
           {studentLocation && (
             <div className="location-info">
               <div className="location-title">
@@ -474,6 +591,7 @@ function ScanQR() {
               <div className="location-details">
                 <div>
                   <strong>Latitude</strong>
+
                   <span>
                     {studentLocation.latitude.toFixed(6)}
                   </span>
@@ -481,6 +599,7 @@ function ScanQR() {
 
                 <div>
                   <strong>Longitude</strong>
+
                   <span>
                     {studentLocation.longitude.toFixed(6)}
                   </span>
@@ -488,14 +607,20 @@ function ScanQR() {
 
                 <div>
                   <strong>Accuracy</strong>
+
                   <span>
-                    ±{studentLocation.accuracy?.toFixed(1) || "—"} m
+                    ±
+                    {studentLocation.accuracy?.toFixed(
+                      1
+                    ) || "—"}{" "}
+                    m
                   </span>
                 </div>
 
                 {distance !== null && (
                   <div>
                     <strong>Distance</strong>
+
                     <span>
                       {distance.toFixed(1)} m
                     </span>
@@ -505,16 +630,16 @@ function ScanQR() {
             </div>
           )}
 
-          {/* -------------------------------------------------
-              Scanner Controls
-          -------------------------------------------------- */}
+          {/* Scanner Controls */}
           <div className="scanner-controls">
             {!scanning ? (
               <button
                 type="button"
                 className="scan-btn"
                 onClick={startScanner}
-                disabled={loading || gettingLocation}
+                disabled={
+                  loading || gettingLocation
+                }
               >
                 <FaQrcode />
                 Start Scanner
@@ -532,49 +657,60 @@ function ScanQR() {
             )}
           </div>
 
-          {/* -------------------------------------------------
-              Instructions
-          -------------------------------------------------- */}
+          {/* Instructions */}
           <div className="scan-instructions">
             <h3>How it works</h3>
 
             <div className="instruction-item">
               <span>1</span>
+
               <p>
-                Click <strong>Start Scanner</strong>.
+                Click{" "}
+                <strong>Start Scanner</strong>.
               </p>
             </div>
 
             <div className="instruction-item">
               <span>2</span>
+
               <p>
-                Allow camera and location permissions.
+                Allow camera and location
+                permissions.
               </p>
             </div>
 
             <div className="instruction-item">
               <span>3</span>
+
               <p>
-                Scan the QR code displayed by your lecturer.
+                Scan the QR code displayed by
+                your lecturer.
               </p>
             </div>
 
             <div className="instruction-item">
               <span>4</span>
+
               <p>
-                Your location is checked against the lecturer's
-                current location.
+                Your location is checked against
+                the lecturer's current location.
               </p>
             </div>
 
             <div className="instruction-item">
               <span>5</span>
+
               <p>
-                Attendance is accepted when you are within{" "}
-                <strong>{ALLOWED_RADIUS} meters</strong>.
+                Attendance is accepted when you
+                are within{" "}
+                <strong>
+                  {ALLOWED_RADIUS} meters
+                </strong>
+                .
               </p>
             </div>
           </div>
+
         </div>
       </div>
     </DashboardLayout>
