@@ -1,151 +1,461 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  FaClipboardCheck,
+  FaBook,
+  FaCalendarAlt,
+  FaUsers,
+  FaArrowRight,
+  FaSyncAlt,
+} from "react-icons/fa";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
 import API_URL from "../../config/api";
 
+import "../../styles/dashboard.css";
+import "../../styles/attendanceHistory.css";
+
 function AttendanceHistory() {
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-    const [sessions, setSessions] = useState([]);
-    const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    loadSessions();
+  }, []);
 
-    useEffect(() => {
-        loadSessions();
-    }, []);
+  async function loadSessions() {
+    try {
+      setLoading(true);
+      setError("");
 
-    async function loadSessions() {
+      const user = JSON.parse(localStorage.getItem("user"));
 
-        try {
+      if (!user?.id) {
+        throw new Error("Lecturer information could not be found.");
+      }
 
-            const user = JSON.parse(localStorage.getItem("user"));
-
-                        const response = await fetch(
-                    `${API_URL}/api/attendance/lecturer/${user.id}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem("token")}`,
-                        },
-                    }
-                );
-
-            const data = await response.json();
-
-            setSessions(data.sessions);
-
+      const response = await fetch(
+        `${API_URL}/api/attendance/lecturer/${user.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
+      );
 
-        catch (error) {
+      const data = await response.json();
 
-            console.log(error);
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to load attendance history."
+        );
+      }
 
-        }
+      setSessions(data.sessions || []);
+    } catch (error) {
+      console.error("Error loading attendance history:", error);
+      setError(error.message);
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-        finally {
+  function formatDate(date) {
+    if (!date) return "N/A";
 
-            setLoading(false);
+    return new Date(date).toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
 
-        }
+  function formatTime(date) {
+    if (!date) return "N/A";
 
+    return new Date(date).toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function getStatusClass(status) {
+    if (!status) return "status-default";
+
+    const normalizedStatus = status.toLowerCase();
+
+    if (
+      normalizedStatus === "active" ||
+      normalizedStatus === "open"
+    ) {
+      return "status-active";
     }
 
-    return (
+    if (
+      normalizedStatus === "closed" ||
+      normalizedStatus === "completed"
+    ) {
+      return "status-completed";
+    }
 
-        <DashboardLayout
-            title="Attendance History"
-            role="lecturer"
-        >
+    if (
+      normalizedStatus === "expired"
+    ) {
+      return "status-expired";
+    }
 
-            <PageHeader
-                title="Attendance History"
-                subtitle="View all attendance sessions."
-            />
+    return "status-default";
+  }
 
-            {
-                loading ?
+  return (
+    <DashboardLayout
+      title="Attendance History"
+      role="lecturer"
+    >
+      <div className="attendance-history-page">
 
-                <h2>Loading...</h2>
+        {/* =========================
+            PAGE HEADER
+           ========================= */}
 
-                :
+        <PageHeader
+          title="Attendance History"
+          subtitle="Review attendance sessions generated for your assigned courses."
+        />
 
-                sessions.length === 0 ?
+        {/* =========================
+            SUMMARY
+           ========================= */}
 
-                <h2>No Attendance Sessions Found</h2>
+        <div className="attendance-history-summary">
 
-                :
+          <div className="attendance-summary-card">
+            <div className="attendance-summary-icon blue">
+              <FaClipboardCheck />
+            </div>
 
-                <table className="attendance-table">
+            <div>
+              <span>Total Sessions</span>
+              <strong>{sessions.length}</strong>
+            </div>
+          </div>
 
-                    <thead>
+          <div className="attendance-summary-card">
+            <div className="attendance-summary-icon green">
+              <FaBook />
+            </div>
 
-                        <tr>
+            <div>
+              <span>Courses</span>
+              <strong>
+                {
+                  new Set(
+                    sessions
+                      .map(
+                        (session) =>
+                          session.course?._id ||
+                          session.course?.courseCode
+                      )
+                      .filter(Boolean)
+                  ).size
+                }
+              </strong>
+            </div>
+          </div>
 
-                            <th>Course</th>
-                            <th>Code</th>
-                            <th>Status</th>
-                            <th>Students</th>
-                            <th>Date</th>
-                            <th>Action</th>
+          <div className="attendance-summary-card">
+            <div className="attendance-summary-icon orange">
+              <FaUsers />
+            </div>
 
-                        </tr>
+            <div>
+              <span>Students Recorded</span>
+              <strong>
+                {sessions.reduce(
+                  (total, session) =>
+                    total + (session.totalStudents || 0),
+                  0
+                )}
+              </strong>
+            </div>
+          </div>
 
-                    </thead>
+        </div>
 
-                    <tbody>
+        {/* =========================
+            ATTENDANCE SECTION
+           ========================= */}
 
-                        {
+        <div className="attendance-history-section">
 
-                            sessions.map(session => (
+          <div className="attendance-history-section-header">
 
-                                <tr key={session._id}>
+            <div>
+              <span className="attendance-section-label">
+                ATTENDANCE MANAGEMENT
+              </span>
 
-                                    <td>
-                                        {session.course.courseName}
-                                    </td>
+              <h2>
+                Attendance Sessions
+              </h2>
 
-                                    <td>
-                                        {session.course.courseCode}
-                                    </td>
+              <p>
+                All attendance sessions generated by you.
+              </p>
+            </div>
 
-                                    <td>
-                                        {session.status}
-                                    </td>
+            <button
+              type="button"
+              className="attendance-refresh-btn"
+              onClick={loadSessions}
+              disabled={loading}
+            >
+              <FaSyncAlt
+                className={loading ? "spinning" : ""}
+              />
 
-                                    <td>
-                                        {session.totalStudents}
-                                    </td>
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
 
-                                    <td>
-                                        {new Date(session.startTime).toLocaleString()}
-                                    </td>
+          </div>
 
-                                    <td>
+          {/* =========================
+              LOADING
+             ========================= */}
 
-                                                                    <Link
-    to={`/lecturer/attendance/${session._id}`}
->
-    View
-</Link>
-                            
+          {loading && (
+            <div className="attendance-history-empty">
 
-                                    </td>
+              <div className="attendance-loading-icon">
+                <FaClipboardCheck />
+              </div>
 
-                                </tr>
+              <h3>
+                Loading attendance history...
+              </h3>
 
-                            ))
+              <p>
+                Please wait while we retrieve your attendance sessions.
+              </p>
 
-                        }
+            </div>
+          )}
 
-                    </tbody>
+          {/* =========================
+              ERROR
+             ========================= */}
+
+          {!loading && error && (
+            <div className="attendance-history-empty error-state">
+
+              <div className="attendance-loading-icon">
+                <FaClipboardCheck />
+              </div>
+
+              <h3>
+                Unable to load attendance history
+              </h3>
+
+              <p>
+                {error}
+              </p>
+
+              <button
+                type="button"
+                className="attendance-retry-btn"
+                onClick={loadSessions}
+              >
+                <FaSyncAlt />
+                Try Again
+              </button>
+
+            </div>
+          )}
+
+          {/* =========================
+              EMPTY
+             ========================= */}
+
+          {!loading &&
+            !error &&
+            sessions.length === 0 && (
+              <div className="attendance-history-empty">
+
+                <div className="attendance-loading-icon">
+                  <FaClipboardCheck />
+                </div>
+
+                <h3>
+                  No attendance sessions yet
+                </h3>
+
+                <p>
+                  Attendance sessions that you generate
+                  will appear here.
+                </p>
+
+                <Link
+                  to="/lecturer/start-attendance"
+                  className="attendance-start-btn"
+                >
+                  <FaClipboardCheck />
+                  Start Attendance
+                  <FaArrowRight />
+                </Link>
+
+              </div>
+            )}
+
+          {/* =========================
+              DESKTOP TABLE
+             ========================= */}
+
+          {!loading &&
+            !error &&
+            sessions.length > 0 && (
+              <div className="attendance-table-wrapper">
+
+                <table className="attendance-history-table">
+
+                  <thead>
+                    <tr>
+                      <th>COURSE</th>
+                      <th>CODE</th>
+                      <th>STATUS</th>
+                      <th>STUDENTS</th>
+                      <th>DATE</th>
+                      <th>ACTION</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {sessions.map((session) => (
+
+                      <tr key={session._id}>
+
+                        {/* COURSE */}
+
+                        <td>
+                          <div className="attendance-course-cell">
+
+                            <div className="attendance-course-icon">
+                              <FaBook />
+                            </div>
+
+                            <div>
+                              <strong>
+                                {session.course?.courseName ||
+                                  "Unknown Course"}
+                              </strong>
+
+                              {session.course?.title &&
+                                session.course.title !==
+                                  session.course.courseName && (
+                                  <small>
+                                    {session.course.title}
+                                  </small>
+                                )}
+                            </div>
+
+                          </div>
+                        </td>
+
+                        {/* CODE */}
+
+                        <td>
+                          <span className="course-code">
+                            {session.course?.courseCode ||
+                              "N/A"}
+                          </span>
+                        </td>
+
+                        {/* STATUS */}
+
+                        <td>
+                          <span
+                            className={`attendance-status ${getStatusClass(
+                              session.status
+                            )}`}
+                          >
+                            <span className="status-dot"></span>
+                            {session.status || "Unknown"}
+                          </span>
+                        </td>
+
+                        {/* STUDENTS */}
+
+                        <td>
+                          <div className="student-count">
+
+                            <FaUsers />
+
+                            <strong>
+                              {session.totalStudents || 0}
+                            </strong>
+
+                            <span>
+                              recorded
+                            </span>
+
+                          </div>
+                        </td>
+
+                        {/* DATE */}
+
+                        <td>
+                          <div className="attendance-date">
+
+                            <FaCalendarAlt />
+
+                            <div>
+                              <strong>
+                                {formatDate(
+                                  session.startTime
+                                )}
+                              </strong>
+
+                              <small>
+                                {formatTime(
+                                  session.startTime
+                                )}
+                              </small>
+                            </div>
+
+                          </div>
+                        </td>
+
+                        {/* ACTION */}
+
+                        <td>
+                          <Link
+                            to={`/lecturer/attendance/${session._id}`}
+                            className="attendance-view-btn"
+                          >
+                            View
+                            <FaArrowRight />
+                          </Link>
+                        </td>
+
+                      </tr>
+
+                    ))}
+
+                  </tbody>
 
                 </table>
 
-            }
+              </div>
+            )}
 
-        </DashboardLayout>
+        </div>
 
-    );
-
+      </div>
+    </DashboardLayout>
+  );
 }
 
 export default AttendanceHistory;

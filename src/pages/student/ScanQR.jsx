@@ -1,622 +1,584 @@
-import { useState } from "react";
-import { Scanner } from "@yudiel/react-qr-scanner";
+import { useEffect, useRef, useState } from "react";
+import { Html5Qrcode } from "html5-qrcode";
+import {
+  FaQrcode,
+  FaMapMarkerAlt,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaSpinner,
+} from "react-icons/fa";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
 import API_URL from "../../config/api";
 
+import "../../styles/scanQR.css";
+
+const ALLOWED_RADIUS = 50; // meters
+
 function ScanQR() {
-    const [scanning, setScanning] = useState(true);
-    const [message, setMessage] = useState("");
-    const [checkingLocation, setCheckingLocation] = useState(false);
-    const [useTestLocation, setUseTestLocation] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
 
-    const student = JSON.parse(localStorage.getItem("user"));
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
 
-    /*
-     * ==========================================
-     * ATTENDANCE LOCATION
-     * ==========================================
-     *
-     * TEMPORARY TEST LOCATION
-     *
-     * Replace these coordinates later with the
-     * actual classroom/campus coordinates.
-     */
+  const [studentLocation, setStudentLocation] = useState(null);
+  const [distance, setDistance] = useState(null);
 
-    const CLASS_LOCATION = {
-        latitude: 5.6037,
-        longitude: -0.1870,
-    };
+  const scannerRef = useRef(null);
+  const processingRef = useRef(false);
 
-    /*
-     * Students must be within this distance
-     * from the classroom.
-     */
-    const ALLOWED_RADIUS = 100; // metres
+  const user = JSON.parse(localStorage.getItem("user") || "null");
 
+  // ---------------------------------------------------------
+  // Calculate distance between two GPS coordinates
+  // ---------------------------------------------------------
+  const calculateDistance = (
+    studentLatitude,
+    studentLongitude,
+    lecturerLatitude,
+    lecturerLongitude
+  ) => {
+    const earthRadius = 6371000; // meters
 
-    /*
-     * ==========================================
-     * CALCULATE DISTANCE
-     * ==========================================
-     *
-     * Uses the Haversine formula to calculate
-     * distance between two GPS coordinates.
-     */
+    const lat1 = (studentLatitude * Math.PI) / 180;
+    const lat2 = (lecturerLatitude * Math.PI) / 180;
 
-    function calculateDistance(
-        latitude1,
-        longitude1,
-        latitude2,
-        longitude2
-    ) {
-        const earthRadius = 6371000;
+    const deltaLat =
+      ((lecturerLatitude - studentLatitude) * Math.PI) / 180;
 
-        const lat1 = (latitude1 * Math.PI) / 180;
-        const lat2 = (latitude2 * Math.PI) / 180;
+    const deltaLon =
+      ((lecturerLongitude - studentLongitude) * Math.PI) / 180;
 
-        const deltaLat =
-            ((latitude2 - latitude1) * Math.PI) / 180;
+    const a =
+      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+      Math.cos(lat1) *
+        Math.cos(lat2) *
+        Math.sin(deltaLon / 2) *
+        Math.sin(deltaLon / 2);
 
-        const deltaLon =
-            ((longitude2 - longitude1) * Math.PI) / 180;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-        const a =
-            Math.sin(deltaLat / 2) *
-                Math.sin(deltaLat / 2) +
-            Math.cos(lat1) *
-                Math.cos(lat2) *
-                Math.sin(deltaLon / 2) *
-                Math.sin(deltaLon / 2);
+    return earthRadius * c;
+  };
 
-        const c =
-            2 *
-            Math.atan2(
-                Math.sqrt(a),
-                Math.sqrt(1 - a)
-            );
+  // ---------------------------------------------------------
+  // Get student's current GPS location
+  // ---------------------------------------------------------
+  const getStudentLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(
+          new Error(
+            "Geolocation is not supported by this browser."
+          )
+        );
+        return;
+      }
 
-        return earthRadius * c;
-    }
+      setGettingLocation(true);
 
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setGettingLocation(false);
 
-    /*
-     * ==========================================
-     * GET STUDENT LOCATION
-     * ==========================================
-     */
+          const location = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          };
 
-    function getStudentLocation() {
-        return new Promise((resolve, reject) => {
-            if (!navigator.geolocation) {
-                reject(
-                    new Error(
-                        "GPS is not supported by this device."
-                    )
-                );
-                return;
-            }
+          setStudentLocation(location);
 
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    resolve({
-                        latitude:
-                            position.coords.latitude,
-                        longitude:
-                            position.coords.longitude,
-                        accuracy:
-                            position.coords.accuracy,
-                    });
-                },
-                (error) => {
-                    let errorMessage =
-                        "Unable to get your location.";
+          resolve(location);
+        },
+        (error) => {
+          setGettingLocation(false);
 
-                    if (error.code === 1) {
-                        errorMessage =
-                            "Location permission was denied. Please allow GPS access.";
-                    }
+          let errorMessage =
+            "Unable to get your current location.";
 
-                    if (error.code === 2) {
-                        errorMessage =
-                            "Your location could not be determined.";
-                    }
+          if (error.code === error.PERMISSION_DENIED) {
+            errorMessage =
+              "Location permission was denied. Please allow location access and try again.";
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            errorMessage =
+              "Your current location could not be determined. Please try again.";
+          } else if (error.code === error.TIMEOUT) {
+            errorMessage =
+              "Getting your location took too long. Please try again.";
+          }
 
-                    if (error.code === 3) {
-                        errorMessage =
-                            "Location request timed out. Please try again.";
-                    }
-
-                    reject(new Error(errorMessage));
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0,
-                }
-            );
-        });
-    }
-
-
-    /*
-     * ==========================================
-     * CHECK GPS LOCATION
-     * ==========================================
-     */
-
-    async function checkLocation() {
-        setCheckingLocation(true);
-        setMessage("");
-
-        try {
-            let studentLocation;
-
-            /*
-             * ======================================
-             * TEMPORARY TEST MODE
-             * ======================================
-             *
-             * This allows you to test the system
-             * while you are at home.
-             */
-
-            if (useTestLocation) {
-
-                studentLocation = {
-                    latitude: CLASS_LOCATION.latitude,
-                    longitude: CLASS_LOCATION.longitude,
-                    accuracy: 5,
-                };
-
-                console.log(
-                    "GPS TEST MODE ENABLED"
-                );
-
-            } else {
-
-                studentLocation =
-                    await getStudentLocation();
-
-                console.log(
-                    "Real student location:",
-                    studentLocation
-                );
-            }
-
-
-            /*
-             * Calculate distance from classroom.
-             */
-
-            const distance =
-                calculateDistance(
-                    studentLocation.latitude,
-                    studentLocation.longitude,
-                    CLASS_LOCATION.latitude,
-                    CLASS_LOCATION.longitude
-                );
-
-
-            console.log(
-                "Distance from classroom:",
-                distance,
-                "metres"
-            );
-
-
-            /*
-             * Check whether student is
-             * inside allowed radius.
-             */
-
-            if (distance > ALLOWED_RADIUS) {
-
-                setCheckingLocation(false);
-
-                setScanning(true);
-
-                setMessage(
-                    `Attendance denied. You are approximately ${Math.round(
-                        distance
-                    )} metres away from the attendance location. You must be within ${ALLOWED_RADIUS} metres.`
-                );
-
-                return false;
-            }
-
-
-            /*
-             * Student is inside the location.
-             */
-
-            console.log(
-                "Location verified successfully."
-            );
-
-            setCheckingLocation(false);
-
-            return true;
-
-        } catch (error) {
-
-            console.error(
-                "GPS error:",
-                error
-            );
-
-            setCheckingLocation(false);
-            setScanning(true);
-
-            setMessage(
-                error.message ||
-                    "Unable to verify your location."
-            );
-
-            return false;
+          reject(new Error(errorMessage));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
         }
+      );
+    });
+  };
+
+  // ---------------------------------------------------------
+  // Get attendance session using QR token
+  // ---------------------------------------------------------
+  const getAttendanceSession = async (qrToken) => {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(
+      `${API_URL}/api/attendance-sessions/token/${qrToken}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Unable to retrieve attendance session."
+      );
     }
 
+    return data.session;
+  };
 
-    /*
-     * ==========================================
-     * QR SCAN
-     * ==========================================
-     */
+  // ---------------------------------------------------------
+  // Record attendance
+  // ---------------------------------------------------------
+  const recordAttendance = async (
+    qrToken,
+    location,
+    calculatedDistance
+  ) => {
+    const token = localStorage.getItem("token");
 
-    async function handleScan(result) {
+    const response = await fetch(
+      `${API_URL}/api/attendance/scan`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          qrToken,
+          studentId: user?.id,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracy: location.accuracy,
+          distanceFromLecturer: calculatedDistance,
+        }),
+      }
+    );
 
-        if (
-            !result ||
-            !scanning ||
-            checkingLocation
-        ) {
-            return;
-        }
+    const data = await response.json();
 
-        /*
-         * Stop scanner while processing.
-         */
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Unable to record attendance."
+      );
+    }
 
-        setScanning(false);
+    return data;
+  };
 
+  // ---------------------------------------------------------
+  // Handle successful QR scan
+  // ---------------------------------------------------------
+  const handleScan = async (decodedText) => {
+    if (processingRef.current) {
+      return;
+    }
+
+    processingRef.current = true;
+    setLoading(true);
+
+    try {
+      // Stop camera immediately after successful scan
+      await stopScanner();
+
+      setMessage("Getting your current location...");
+      setMessageType("info");
+
+      // -----------------------------------------------------
+      // 1. Get student's GPS
+      // -----------------------------------------------------
+      const location = await getStudentLocation();
+
+      setMessage("Checking your location...");
+      setMessageType("info");
+
+      // -----------------------------------------------------
+      // 2. Get attendance session from backend
+      // -----------------------------------------------------
+      const session = await getAttendanceSession(decodedText);
+
+      if (!session) {
+        throw new Error(
+          "Attendance session could not be found."
+        );
+      }
+
+      // -----------------------------------------------------
+      // 3. Get lecturer GPS stored in the session
+      // -----------------------------------------------------
+      const lecturerLatitude = Number(
+        session.lecturerLatitude
+      );
+
+      const lecturerLongitude = Number(
+        session.lecturerLongitude
+      );
+
+      if (
+        !Number.isFinite(lecturerLatitude) ||
+        !Number.isFinite(lecturerLongitude)
+      ) {
+        throw new Error(
+          "This attendance session does not have valid lecturer location data."
+        );
+      }
+
+      // -----------------------------------------------------
+      // 4. Calculate distance
+      // -----------------------------------------------------
+      const calculatedDistance = calculateDistance(
+        location.latitude,
+        location.longitude,
+        lecturerLatitude,
+        lecturerLongitude
+      );
+
+      setDistance(calculatedDistance);
+
+      // -----------------------------------------------------
+      // 5. Check 50-meter radius
+      // -----------------------------------------------------
+      if (calculatedDistance > ALLOWED_RADIUS) {
         setMessage(
-            "Checking your location..."
+          `Attendance rejected. You are ${calculatedDistance.toFixed(
+            1
+          )} meters away from the lecturer. You must be within ${ALLOWED_RADIUS} meters.`
         );
 
+        setMessageType("error");
+        return;
+      }
 
-        /*
-         * Verify GPS first.
-         */
+      // -----------------------------------------------------
+      // 6. Record attendance
+      // -----------------------------------------------------
+      setMessage("Location verified. Recording attendance...");
+      setMessageType("info");
 
-        const locationAllowed =
-            await checkLocation();
+      await recordAttendance(
+        decodedText,
+        location,
+        calculatedDistance
+      );
 
-        if (!locationAllowed) {
-            return;
+      setMessage(
+        `Attendance recorded successfully! You are ${calculatedDistance.toFixed(
+          1
+        )} meters from the lecturer.`
+      );
+
+      setMessageType("success");
+    } catch (error) {
+      console.error("QR attendance error:", error);
+
+      setMessage(
+        error.message ||
+          "Something went wrong while scanning the QR code."
+      );
+
+      setMessageType("error");
+    } finally {
+      setLoading(false);
+      processingRef.current = false;
+    }
+  };
+
+  // ---------------------------------------------------------
+  // Start QR scanner
+  // ---------------------------------------------------------
+  const startScanner = async () => {
+    if (scanning) {
+      return;
+    }
+
+    setMessage("");
+    setMessageType("");
+    setDistance(null);
+
+    try {
+      const scanner = new Html5Qrcode("qr-reader");
+
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: {
+            width: 250,
+            height: 250,
+          },
+        },
+        (decodedText) => {
+          handleScan(decodedText);
+        },
+        () => {
+          // Ignore normal QR scanning failures.
         }
+      );
 
+      setScanning(true);
+    } catch (error) {
+      console.error("Unable to start QR scanner:", error);
 
-        /*
-         * Get QR token.
-         */
+      setMessage(
+        "Unable to access the camera. Please allow camera permission and try again."
+      );
 
-        const qrToken =
-            result?.[0]?.rawValue;
+      setMessageType("error");
 
-        if (!qrToken) {
+      scannerRef.current = null;
+    }
+  };
 
-            setMessage(
-                "Invalid QR code. Please scan again."
-            );
+  // ---------------------------------------------------------
+  // Stop QR scanner
+  // ---------------------------------------------------------
+  const stopScanner = async () => {
+    if (!scannerRef.current) {
+      setScanning(false);
+      return;
+    }
 
-            setScanning(true);
+    try {
+      const scanner = scannerRef.current;
 
-            return;
-        }
+      if (scanner.isScanning) {
+        await scanner.stop();
+      }
 
+      scanner.clear();
+    } catch (error) {
+      console.error("Error stopping scanner:", error);
+    } finally {
+      scannerRef.current = null;
+      setScanning(false);
+    }
+  };
 
-        /*
-         * ======================================
-         * SEND ATTENDANCE TO BACKEND
-         * ======================================
-         */
-
-        try {
-
-            setMessage(
-                "Location verified. Recording attendance..."
-            );
-
-            const response =
-                await fetch(
-                    `${API_URL}/api/attendance/scan`,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json",
-
-                            Authorization: `Bearer ${localStorage.getItem(
-                                "token"
-                            )}`,
-                        },
-
-                        body: JSON.stringify({
-                            qrToken,
-                            studentId:
-                                student.id,
-                        }),
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                setMessage(
-                    data.message ||
-                        "Unable to record attendance."
-                );
-
-                setScanning(true);
-
-                return;
+  // ---------------------------------------------------------
+  // Cleanup scanner when leaving page
+  // ---------------------------------------------------------
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current
+          .stop()
+          .catch(() => {})
+          .finally(() => {
+            try {
+              scannerRef.current?.clear();
+            } catch (error) {
+              // Ignore cleanup errors
             }
 
+            scannerRef.current = null;
+          });
+      }
+    };
+  }, []);
 
-            /*
-             * Successful attendance.
-             */
+  return (
+    <DashboardLayout
+      title="Scan QR Code"
+      role="student"
+    >
+      <PageHeader
+        title="Scan Attendance QR"
+        subtitle="Scan your lecturer's QR code to mark your attendance."
+      />
 
-            setMessage(
-                data.message ||
-                    "Attendance recorded successfully."
-            );
-
-        } catch (error) {
-
-            console.error(
-                "Attendance error:",
-                error
-            );
-
-            setMessage(
-                "Server Error. Please try again."
-            );
-
-            setScanning(true);
-        }
-    }
-
-
-    /*
-     * ==========================================
-     * RETRY
-     * ==========================================
-     */
-
-    function handleRetry() {
-        setMessage("");
-        setScanning(true);
-    }
-
-
-    return (
-        <DashboardLayout
-            title="Scan QR"
-            role="student"
-        >
-
-            <PageHeader
-                title="Scan Attendance"
-                subtitle="Scan the lecturer's QR code and verify your location."
-            />
-
-
-            <div className="scan-page">
-
-
-                {/* GPS MODE */}
-
-                <div
-                    style={{
-                        marginBottom: "20px",
-                        padding: "15px",
-                        borderRadius: "10px",
-                        background: "#f5f5f5",
-                    }}
-                >
-
-                    <label
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            cursor: "pointer",
-                        }}
-                    >
-
-                        <input
-                            type="checkbox"
-                            checked={useTestLocation}
-                            onChange={(e) =>
-                                setUseTestLocation(
-                                    e.target.checked
-                                )
-                            }
-                        />
-
-                        <span>
-                            🧪 Use test location
-                        </span>
-
-                    </label>
-
-
-                    {useTestLocation && (
-                        <small
-                            style={{
-                                display: "block",
-                                marginTop: "8px",
-                                color: "#777",
-                            }}
-                        >
-                            Test mode is enabled.
-                            The system will simulate
-                            that you are at the
-                            classroom location.
-                        </small>
-                    )}
-
-                </div>
-
-
-                {/* LOCATION CHECKING */}
-
-                {checkingLocation && (
-
-                    <div
-                        style={{
-                            textAlign: "center",
-                            padding: "20px",
-                        }}
-                    >
-
-                        <h3>
-                            📍 Checking your location...
-                        </h3>
-
-                        <p>
-                            Please wait while we
-                            verify that you are
-                            within the attendance
-                            area.
-                        </p>
-
-                    </div>
-
-                )}
-
-
-                {/* QR SCANNER */}
-
-                {scanning &&
-                    !checkingLocation && (
-
-                        <div
-                            style={{
-                                maxWidth: "500px",
-                                margin: "auto",
-                            }}
-                        >
-
-                            <Scanner
-                                constraints={{
-                                    facingMode: {
-                                        ideal:
-                                            "environment",
-                                    },
-                                }}
-                                scanDelay={500}
-                                onScan={handleScan}
-                                onError={(error) => {
-                                    console.log(
-                                        error
-                                    );
-                                }}
-                            />
-
-                        </div>
-
-                    )}
-
-
-                {/* MESSAGE */}
-
-                {message && (
-
-                    <div
-                        className="scan-message"
-                        style={{
-                            marginTop: "20px",
-                            padding: "20px",
-                            textAlign: "center",
-                        }}
-                    >
-
-                        <h2>
-                            {message}
-                        </h2>
-
-
-                        {!checkingLocation &&
-                            scanning && (
-
-                                <button
-                                    type="button"
-                                    onClick={
-                                        handleRetry
-                                    }
-                                    style={{
-                                        marginTop:
-                                            "15px",
-                                        padding:
-                                            "10px 20px",
-                                        cursor:
-                                            "pointer",
-                                    }}
-                                >
-                                    Try Again
-                                </button>
-
-                            )}
-
-                    </div>
-
-                )}
-
-
-                {/* SUCCESS */}
-
-                {message &&
-                    message.toLowerCase().includes(
-                        "success"
-                    ) && (
-
-                        <div
-                            style={{
-                                textAlign:
-                                    "center",
-                                marginTop:
-                                    "20px",
-                            }}
-                        >
-
-                            <h2>
-                                ✅ Attendance
-                                Recorded
-                            </h2>
-
-                            <p>
-                                Your attendance
-                                has been successfully
-                                recorded.
-                            </p>
-
-                        </div>
-
-                    )}
-
+      <div className="scan-qr-page">
+        {/* -------------------------------------------------
+            Scanner Card
+        -------------------------------------------------- */}
+        <div className="scan-card">
+          <div className="scan-card-header">
+            <div className="scan-icon">
+              <FaQrcode />
             </div>
 
-        </DashboardLayout>
-    );
+            <div>
+              <h2>Attendance Scanner</h2>
+              <p>
+                Scan the QR code displayed by your lecturer.
+              </p>
+            </div>
+          </div>
+
+          {/* -------------------------------------------------
+              QR Reader
+          -------------------------------------------------- */}
+          <div
+            id="qr-reader"
+            className="qr-reader"
+          ></div>
+
+          {/* -------------------------------------------------
+              Status Message
+          -------------------------------------------------- */}
+          {message && (
+            <div
+              className={`scan-message ${messageType}`}
+            >
+              {messageType === "success" && (
+                <FaCheckCircle />
+              )}
+
+              {messageType === "error" && (
+                <FaTimesCircle />
+              )}
+
+              {messageType === "info" && (
+                <FaSpinner className="spin" />
+              )}
+
+              <span>{message}</span>
+            </div>
+          )}
+
+          {/* -------------------------------------------------
+              GPS Information
+          -------------------------------------------------- */}
+          {studentLocation && (
+            <div className="location-info">
+              <div className="location-title">
+                <FaMapMarkerAlt />
+                <span>Your Current Location</span>
+              </div>
+
+              <div className="location-details">
+                <div>
+                  <strong>Latitude</strong>
+                  <span>
+                    {studentLocation.latitude.toFixed(6)}
+                  </span>
+                </div>
+
+                <div>
+                  <strong>Longitude</strong>
+                  <span>
+                    {studentLocation.longitude.toFixed(6)}
+                  </span>
+                </div>
+
+                <div>
+                  <strong>Accuracy</strong>
+                  <span>
+                    ±{studentLocation.accuracy?.toFixed(1) || "—"} m
+                  </span>
+                </div>
+
+                {distance !== null && (
+                  <div>
+                    <strong>Distance</strong>
+                    <span>
+                      {distance.toFixed(1)} m
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* -------------------------------------------------
+              Scanner Controls
+          -------------------------------------------------- */}
+          <div className="scanner-controls">
+            {!scanning ? (
+              <button
+                type="button"
+                className="scan-btn"
+                onClick={startScanner}
+                disabled={loading || gettingLocation}
+              >
+                <FaQrcode />
+                Start Scanner
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="stop-scan-btn"
+                onClick={stopScanner}
+                disabled={loading}
+              >
+                <FaTimesCircle />
+                Stop Scanner
+              </button>
+            )}
+          </div>
+
+          {/* -------------------------------------------------
+              Instructions
+          -------------------------------------------------- */}
+          <div className="scan-instructions">
+            <h3>How it works</h3>
+
+            <div className="instruction-item">
+              <span>1</span>
+              <p>
+                Click <strong>Start Scanner</strong>.
+              </p>
+            </div>
+
+            <div className="instruction-item">
+              <span>2</span>
+              <p>
+                Allow camera and location permissions.
+              </p>
+            </div>
+
+            <div className="instruction-item">
+              <span>3</span>
+              <p>
+                Scan the QR code displayed by your lecturer.
+              </p>
+            </div>
+
+            <div className="instruction-item">
+              <span>4</span>
+              <p>
+                Your location is checked against the lecturer's
+                current location.
+              </p>
+            </div>
+
+            <div className="instruction-item">
+              <span>5</span>
+              <p>
+                Attendance is accepted when you are within{" "}
+                <strong>{ALLOWED_RADIUS} meters</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
 }
 
 export default ScanQR;
