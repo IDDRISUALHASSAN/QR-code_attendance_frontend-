@@ -9,9 +9,12 @@ import {
   FaSearch,
   FaFilter,
   FaUsers,
+  FaChevronDown,
 } from "react-icons/fa";
 
 import API_URL from "../../config/api";
+
+
 
 function Students() {
   const [students, setStudents] = useState([]);
@@ -22,6 +25,9 @@ function Students() {
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [levelFilter, setLevelFilter] = useState("");
+
+  // Controls whether search suggestions are visible
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // =========================
   // MODAL STATES
@@ -74,9 +80,78 @@ function Students() {
   }, [students]);
 
   // =========================
-  // FIXED LEVELS
+  // LEVELS
   // =========================
   const levels = ["100", "200", "300", "400"];
+
+  // =========================
+  // SEARCH SUGGESTIONS
+  // =========================
+  const searchSuggestions = useMemo(() => {
+    const searchText = search.trim().toLowerCase();
+
+    if (!searchText) {
+      return [];
+    }
+
+    const suggestions = [];
+
+    students.forEach((student) => {
+      const name = student.name || "";
+      const indexNumber = student.indexNumber || "";
+      const email = student.email || "";
+      const department = student.department || "";
+      const level = student.level
+        ? `Level ${student.level}`
+        : "";
+
+      const values = [
+        {
+          value: name,
+          type: "Student",
+        },
+        {
+          value: indexNumber,
+          type: "Index Number",
+        },
+        {
+          value: email,
+          type: "Email",
+        },
+        {
+          value: department,
+          type: "Department",
+        },
+        {
+          value: level,
+          type: "Level",
+        },
+      ];
+
+      values.forEach((item) => {
+        if (
+          item.value &&
+          item.value.toLowerCase().includes(searchText)
+        ) {
+          suggestions.push(item);
+        }
+      });
+    });
+
+    // Remove duplicate suggestions
+    const uniqueSuggestions = suggestions.filter(
+      (suggestion, index, array) =>
+        index ===
+        array.findIndex(
+          (item) =>
+            item.value.toLowerCase() ===
+              suggestion.value.toLowerCase() &&
+            item.type === suggestion.type
+        )
+    );
+
+    return uniqueSuggestions.slice(0, 8);
+  }, [students, search]);
 
   // =========================
   // FILTER STUDENTS
@@ -85,14 +160,22 @@ function Students() {
     const searchText = search.trim().toLowerCase();
 
     return students.filter((student) => {
-      const matchesSearch =
-        !searchText ||
-        student.name?.toLowerCase().includes(searchText) ||
-        student.indexNumber?.toLowerCase().includes(searchText) ||
-        student.email?.toLowerCase().includes(searchText) ||
-        student.department?.toLowerCase().includes(searchText) ||
-        student.level?.toString().toLowerCase().includes(searchText) ||
-        student.className?.toLowerCase().includes(searchText);
+      const studentLevel = student.level
+  ? `level ${student.level}`.toLowerCase()
+  : "";
+
+const rawLevel = student.level
+  ? student.level.toString().toLowerCase()
+  : "";
+
+const matchesSearch =
+  !searchText ||
+  student.name?.toLowerCase().includes(searchText) ||
+  student.indexNumber?.toLowerCase().includes(searchText) ||
+  student.email?.toLowerCase().includes(searchText) ||
+  student.department?.toLowerCase().includes(searchText) ||
+  studentLevel.includes(searchText) ||
+  rawLevel.includes(searchText);
 
       const matchesDepartment =
         !departmentFilter ||
@@ -122,6 +205,15 @@ function Students() {
     setSearch("");
     setDepartmentFilter("");
     setLevelFilter("");
+    setShowSuggestions(false);
+  }
+
+  // =========================
+  // SELECT SEARCH SUGGESTION
+  // =========================
+  function selectSuggestion(suggestion) {
+    setSearch(suggestion.value);
+    setShowSuggestions(false);
   }
 
   // =========================
@@ -163,6 +255,12 @@ function Students() {
             : student
         )
       );
+
+      // Update selected student if the view modal
+      // happens to contain the same student
+      if (selectedStudent?._id === editingStudent._id) {
+        setSelectedStudent(data.student);
+      }
 
       setEditingStudent(null);
 
@@ -303,77 +401,164 @@ function Students() {
           <div className="student-filters">
 
             {/* SEARCH */}
-            <div className="student-search-box">
+            <div className="student-search-wrapper">
 
-              <FaSearch />
+              <div className="student-search-box">
 
-              <input
-                type="text"
-                placeholder="Search by name, index number, email, department, level or class..."
-                value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
-              />
+                <FaSearch />
+
+                <input
+                  type="text"
+                  placeholder="Search by name, index number, email, department or level..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => {
+                    if (search.trim()) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Small delay allows a suggestion click
+                    // to complete before hiding the list
+                    setTimeout(() => {
+                      setShowSuggestions(false);
+                    }, 150);
+                  }}
+                />
+
+              </div>
+
+
+              {/* LIVE SEARCH SUGGESTIONS */}
+              {showSuggestions &&
+                search.trim() &&
+                searchSuggestions.length > 0 && (
+
+                  <div className="student-search-suggestions">
+
+                    {searchSuggestions.map(
+                      (suggestion, index) => (
+
+                        <button
+                          type="button"
+                          key={`${suggestion.type}-${suggestion.value}-${index}`}
+                          className="student-search-suggestion"
+                          onMouseDown={(e) =>
+                            e.preventDefault()
+                          }
+                          onClick={() =>
+                            selectSuggestion(
+                              suggestion
+                            )
+                          }
+                        >
+
+                          <div className="suggestion-icon">
+
+                            {suggestion.type ===
+                            "Student" ? (
+                              <FaUsers />
+                            ) : (
+                              <FaSearch />
+                            )}
+
+                          </div>
+
+                          <div className="suggestion-content">
+
+                            <strong>
+                              {suggestion.value}
+                            </strong>
+
+                            <small>
+                              {suggestion.type}
+                            </small>
+
+                          </div>
+
+                        </button>
+
+                      )
+                    )}
+
+                  </div>
+
+                )}
 
             </div>
 
 
             {/* DEPARTMENT FILTER */}
-            <select
-              value={departmentFilter}
-              onChange={(e) =>
-                setDepartmentFilter(e.target.value)
-              }
-            >
+            <div className="student-select-wrapper">
 
-              <option value="">
-                All Departments
-              </option>
+              <select
+                value={departmentFilter}
+                onChange={(e) =>
+                  setDepartmentFilter(
+                    e.target.value
+                  )
+                }
+              >
 
-              {departments.map((department) => (
-
-                <option
-                  key={department}
-                  value={department}
-                >
-                  {department}
+                <option value="">
+                  All Departments
                 </option>
 
-              ))}
+                {departments.map(
+                  (department) => (
 
-            </select>
+                    <option
+                      key={department}
+                      value={department}
+                    >
+                      {department}
+                    </option>
+
+                  )
+                )}
+
+              </select>
+
+              <FaChevronDown />
+
+            </div>
 
 
             {/* LEVEL FILTER */}
-            <select
-              value={levelFilter}
-              onChange={(e) =>
-                setLevelFilter(e.target.value)
-              }
-            >
+            <div className="student-select-wrapper">
 
-              <option value="">
-                All Levels
-              </option>
+              <select
+                value={levelFilter}
+                onChange={(e) =>
+                  setLevelFilter(
+                    e.target.value
+                  )
+                }
+              >
 
-              <option value="100">
-                Level 100
-              </option>
+                <option value="">
+                  All Levels
+                </option>
 
-              <option value="200">
-                Level 200
-              </option>
+                {levels.map((level) => (
 
-              <option value="300">
-                Level 300
-              </option>
+                  <option
+                    key={level}
+                    value={level}
+                  >
+                    Level {level}
+                  </option>
 
-              <option value="400">
-                Level 400
-              </option>
+                ))}
 
-            </select>
+              </select>
+
+              <FaChevronDown />
+
+            </div>
 
 
             {/* CLEAR FILTER */}
@@ -404,6 +589,28 @@ function Students() {
             </strong>{" "}
 
             students
+
+            {(departmentFilter ||
+              levelFilter) && (
+
+              <span className="active-filter-text">
+
+                {" "}
+                •{" "}
+
+                {departmentFilter &&
+                  departmentFilter}
+
+                {departmentFilter &&
+                  levelFilter &&
+                  " • "}
+
+                {levelFilter &&
+                  `Level ${levelFilter}`}
+
+              </span>
+
+            )}
 
           </div>
 
@@ -975,21 +1182,16 @@ function Students() {
                       Select Level
                     </option>
 
-                    <option value="100">
-                      Level 100
-                    </option>
+                    {levels.map((level) => (
 
-                    <option value="200">
-                      Level 200
-                    </option>
+                      <option
+                        key={level}
+                        value={level}
+                      >
+                        Level {level}
+                      </option>
 
-                    <option value="300">
-                      Level 300
-                    </option>
-
-                    <option value="400">
-                      Level 400
-                    </option>
+                    ))}
 
                   </select>
 
