@@ -8,15 +8,13 @@ import {
   FaSpinner,
 } from "react-icons/fa";
 
-
-
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
 import API_URL from "../../config/api";
 
 import "../../styles/scanQR.css";
 
-const ALLOWED_RADIUS =3000000; // meters
+const ALLOWED_RADIUS = 3000000; // meters
 
 function ScanQR() {
   const [scanning, setScanning] = useState(false);
@@ -41,8 +39,7 @@ function ScanQR() {
     if (!navigator.geolocation) {
       return {
         allowed: false,
-        message:
-          "Geolocation is not supported by this browser.",
+        message: "Geolocation is not supported by this browser.",
       };
     }
 
@@ -357,7 +354,9 @@ function ScanQR() {
       // -----------------------------------------------------
       // 5. Calculate distance
       // -----------------------------------------------------
-      setMessage("Checking your distance from the lecturer...");
+      setMessage(
+        "Checking your distance from the lecturer..."
+      );
       setMessageType("info");
 
       const calculatedDistance = calculateDistance(
@@ -367,16 +366,15 @@ function ScanQR() {
         lecturerLongitude
       );
 
+      // Keep distance internally for attendance verification.
       setDistance(calculatedDistance);
 
       // -----------------------------------------------------
-      // 6. Check -meter radius
+      // 6. Check allowed attendance area
       // -----------------------------------------------------
       if (calculatedDistance > ALLOWED_RADIUS) {
         setMessage(
-          `Attendance rejected. You are ${calculatedDistance.toFixed(
-            1
-          )} meters away from the lecturer. You must be within ${ALLOWED_RADIUS} meters.`
+          "Attendance could not be recorded because your current location is outside the attendance area."
         );
 
         setMessageType("error");
@@ -397,8 +395,7 @@ function ScanQR() {
         calculatedDistance
       );
 
-     setMessage("Attendance recorded successfully!👌👌👌");
-
+      setMessage("Attendance recorded successfully!👌👌👌");
       setMessageType("success");
     } catch (error) {
       console.error("QR attendance error:", error);
@@ -602,28 +599,6 @@ function ScanQR() {
                     {studentLocation.longitude.toFixed(6)}
                   </span>
                 </div>
-
-                <div>
-                  <strong>Accuracy</strong>
-
-                  <span>
-                    ±
-                    {studentLocation.accuracy?.toFixed(
-                      1
-                    ) || "—"}{" "}
-                    m
-                  </span>
-                </div>
-
-                {distance !== null && (
-                  <div>
-                    <strong>Distance</strong>
-
-                    <span>
-                      {distance.toFixed(1)} m
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -700,11 +675,7 @@ function ScanQR() {
 
               <p>
                 Attendance is accepted when you
-                are within{" "}
-                <strong>
-                  {ALLOWED_RADIUS} meters
-                </strong>
-                .
+                are close enough to the lecturer.
               </p>
             </div>
           </div>
