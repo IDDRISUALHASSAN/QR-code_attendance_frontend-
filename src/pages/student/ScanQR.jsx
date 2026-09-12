@@ -8,13 +8,15 @@ import {
   FaSpinner,
 } from "react-icons/fa";
 
+
+
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageHeader from "../../components/PageHeader";
 import API_URL from "../../config/api";
 
 import "../../styles/scanQR.css";
 
-const ALLOWED_RADIUS =2000000; // meters
+const ALLOWED_RADIUS =3000000; // meters
 
 function ScanQR() {
   const [scanning, setScanning] = useState(false);
@@ -368,7 +370,7 @@ function ScanQR() {
       setDistance(calculatedDistance);
 
       // -----------------------------------------------------
-      // 6. Check 50-meter radius
+      // 6. Check -meter radius
       // -----------------------------------------------------
       if (calculatedDistance > ALLOWED_RADIUS) {
         setMessage(

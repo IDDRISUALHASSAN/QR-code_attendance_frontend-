@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FaClipboardCheck,
@@ -7,6 +7,10 @@ import {
   FaUsers,
   FaArrowRight,
   FaSyncAlt,
+  FaSearch,
+  FaFilter,
+  FaChalkboardTeacher,
+  FaTimes,
 } from "react-icons/fa";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
@@ -20,6 +24,21 @@ function AttendanceHistory() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Filters
+  const [search, setSearch] = useState("");
+  const [selectedClass, setSelectedClass] = useState("All Classes");
+  const [selectedStatus, setSelectedStatus] = useState("All Status");
+  const [selectedDate, setSelectedDate] = useState("");
+
+  const classOptions = [
+    "All Classes",
+    "Class A",
+    "Class B",
+    "Class C",
+    "Class D",
+    "Class E",
+  ];
 
   useEffect(() => {
     loadSessions();
@@ -101,14 +120,101 @@ function AttendanceHistory() {
       return "status-completed";
     }
 
-    if (
-      normalizedStatus === "expired"
-    ) {
+    if (normalizedStatus === "expired") {
       return "status-expired";
     }
 
     return "status-default";
   }
+
+  function clearFilters() {
+    setSearch("");
+    setSelectedClass("All Classes");
+    setSelectedStatus("All Status");
+    setSelectedDate("");
+  }
+
+  const filteredSessions = useMemo(() => {
+    const searchValue = search.trim().toLowerCase();
+
+    return sessions.filter((session) => {
+      const courseName =
+        session.course?.courseName?.toLowerCase() || "";
+
+      const courseCode =
+        session.course?.courseCode?.toLowerCase() || "";
+
+      const className =
+        session.className?.toLowerCase() || "";
+
+      const status =
+        session.status?.toLowerCase() || "";
+
+      const matchesSearch =
+        !searchValue ||
+        courseName.includes(searchValue) ||
+        courseCode.includes(searchValue) ||
+        className.includes(searchValue);
+
+      const matchesClass =
+        selectedClass === "All Classes" ||
+        session.className === selectedClass;
+
+      const matchesStatus =
+        selectedStatus === "All Status" ||
+        status === selectedStatus.toLowerCase();
+
+      let matchesDate = true;
+
+      if (selectedDate && session.startTime) {
+        const sessionDate = new Date(session.startTime)
+          .toISOString()
+          .split("T")[0];
+
+        matchesDate = sessionDate === selectedDate;
+      }
+
+      return (
+        matchesSearch &&
+        matchesClass &&
+        matchesStatus &&
+        matchesDate
+      );
+    });
+  }, [
+    sessions,
+    search,
+    selectedClass,
+    selectedStatus,
+    selectedDate,
+  ]);
+
+  const totalStudentsRecorded = sessions.reduce(
+    (total, session) =>
+      total + Number(session.totalStudents || 0),
+    0
+  );
+
+  const filteredStudentsRecorded = filteredSessions.reduce(
+    (total, session) =>
+      total + Number(session.totalStudents || 0),
+    0
+  );
+
+  const uniqueCourses = new Set(
+    sessions
+      .map(
+        (session) =>
+          session.course?._id ||
+          session.course?.courseCode
+      )
+      .filter(Boolean)
+  ).size;
+
+  const activeSessions = sessions.filter(
+    (session) =>
+      session.status?.toLowerCase() === "active"
+  ).length;
 
   return (
     <DashboardLayout
@@ -117,13 +223,9 @@ function AttendanceHistory() {
     >
       <div className="attendance-history-page">
 
-        {/* =========================
-            PAGE HEADER
-           ========================= */}
-
         <PageHeader
           title="Attendance History"
-          subtitle="Review attendance sessions generated for your assigned courses."
+          subtitle="Review attendance sessions generated for your assigned courses and classes."
         />
 
         {/* =========================
@@ -150,19 +252,7 @@ function AttendanceHistory() {
 
             <div>
               <span>Courses</span>
-              <strong>
-                {
-                  new Set(
-                    sessions
-                      .map(
-                        (session) =>
-                          session.course?._id ||
-                          session.course?.courseCode
-                      )
-                      .filter(Boolean)
-                  ).size
-                }
-              </strong>
+              <strong>{uniqueCourses}</strong>
             </div>
           </div>
 
@@ -173,13 +263,18 @@ function AttendanceHistory() {
 
             <div>
               <span>Students Recorded</span>
-              <strong>
-                {sessions.reduce(
-                  (total, session) =>
-                    total + (session.totalStudents || 0),
-                  0
-                )}
-              </strong>
+              <strong>{totalStudentsRecorded}</strong>
+            </div>
+          </div>
+
+          <div className="attendance-summary-card">
+            <div className="attendance-summary-icon purple">
+              <FaChalkboardTeacher />
+            </div>
+
+            <div>
+              <span>Active Sessions</span>
+              <strong>{activeSessions}</strong>
             </div>
           </div>
 
@@ -198,12 +293,10 @@ function AttendanceHistory() {
                 ATTENDANCE MANAGEMENT
               </span>
 
-              <h2>
-                Attendance Sessions
-              </h2>
+              <h2>Attendance Sessions</h2>
 
               <p>
-                All attendance sessions generated by you.
+                View and manage attendance records by course and class.
               </p>
             </div>
 
@@ -221,6 +314,126 @@ function AttendanceHistory() {
             </button>
 
           </div>
+
+          {/* =========================
+              FILTERS
+             ========================= */}
+
+          {!loading && !error && sessions.length > 0 && (
+            <div className="attendance-history-filters">
+
+              <div className="attendance-filter-search">
+                <FaSearch />
+
+                <input
+                  type="text"
+                  placeholder="Search course, code or class..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="attendance-filter-control">
+                <FaFilter />
+
+                <select
+                  value={selectedClass}
+                  onChange={(e) =>
+                    setSelectedClass(e.target.value)
+                  }
+                >
+                  {classOptions.map((className) => (
+                    <option
+                      key={className}
+                      value={className}
+                    >
+                      {className}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="attendance-filter-control">
+                <select
+                  value={selectedStatus}
+                  onChange={(e) =>
+                    setSelectedStatus(e.target.value)
+                  }
+                >
+                  <option value="All Status">
+                    All Status
+                  </option>
+
+                  <option value="Active">
+                    Active
+                  </option>
+
+                  <option value="Closed">
+                    Closed
+                  </option>
+
+                  <option value="Expired">
+                    Expired
+                  </option>
+                </select>
+              </div>
+
+              <div className="attendance-filter-date">
+                <FaCalendarAlt />
+
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) =>
+                    setSelectedDate(e.target.value)
+                  }
+                />
+              </div>
+
+              {(search ||
+                selectedClass !== "All Classes" ||
+                selectedStatus !== "All Status" ||
+                selectedDate) && (
+                <button
+                  type="button"
+                  className="attendance-clear-filter-btn"
+                  onClick={clearFilters}
+                >
+                  <FaTimes />
+                  Clear
+                </button>
+              )}
+
+            </div>
+          )}
+
+          {/* =========================
+              FILTER RESULT INFO
+             ========================= */}
+
+          {!loading &&
+            !error &&
+            sessions.length > 0 && (
+              <div className="attendance-filter-result">
+
+                <div>
+                  Showing{" "}
+                  <strong>{filteredSessions.length}</strong>{" "}
+                  of{" "}
+                  <strong>{sessions.length}</strong>{" "}
+                  attendance sessions
+                </div>
+
+                <div>
+                  <FaUsers />
+                  <strong>
+                    {filteredStudentsRecorded}
+                  </strong>{" "}
+                  students recorded
+                </div>
+
+              </div>
+            )}
 
           {/* =========================
               LOADING
@@ -259,9 +472,7 @@ function AttendanceHistory() {
                 Unable to load attendance history
               </h3>
 
-              <p>
-                {error}
-              </p>
+              <p>{error}</p>
 
               <button
                 type="button"
@@ -310,12 +521,46 @@ function AttendanceHistory() {
             )}
 
           {/* =========================
+              NO FILTER RESULTS
+             ========================= */}
+
+          {!loading &&
+            !error &&
+            sessions.length > 0 &&
+            filteredSessions.length === 0 && (
+              <div className="attendance-history-empty">
+
+                <div className="attendance-loading-icon">
+                  <FaSearch />
+                </div>
+
+                <h3>
+                  No matching attendance sessions
+                </h3>
+
+                <p>
+                  Try changing your search or filter options.
+                </p>
+
+                <button
+                  type="button"
+                  className="attendance-retry-btn"
+                  onClick={clearFilters}
+                >
+                  <FaTimes />
+                  Clear Filters
+                </button>
+
+              </div>
+            )}
+
+          {/* =========================
               DESKTOP TABLE
              ========================= */}
 
           {!loading &&
             !error &&
-            sessions.length > 0 && (
+            filteredSessions.length > 0 && (
               <div className="attendance-table-wrapper">
 
                 <table className="attendance-history-table">
@@ -324,16 +569,17 @@ function AttendanceHistory() {
                     <tr>
                       <th>COURSE</th>
                       <th>CODE</th>
+                      <th>CLASS</th>
                       <th>STATUS</th>
                       <th>STUDENTS</th>
-                      <th>DATE</th>
+                      <th>DATE & TIME</th>
                       <th>ACTION</th>
                     </tr>
                   </thead>
 
                   <tbody>
 
-                    {sessions.map((session) => (
+                    {filteredSessions.map((session) => (
 
                       <tr key={session._id}>
 
@@ -371,6 +617,20 @@ function AttendanceHistory() {
                             {session.course?.courseCode ||
                               "N/A"}
                           </span>
+                        </td>
+
+                        {/* CLASS */}
+
+                        <td>
+                          {session.className ? (
+                            <span className="attendance-class-badge">
+                              {session.className}
+                            </span>
+                          ) : (
+                            <span className="attendance-class-unassigned">
+                              Unassigned
+                            </span>
+                          )}
                         </td>
 
                         {/* STATUS */}

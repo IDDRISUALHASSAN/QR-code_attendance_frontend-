@@ -8,6 +8,7 @@ import {
   FaMapMarkerAlt,
   FaSpinner,
   FaCheckCircle,
+  FaUsers,
 } from "react-icons/fa";
 
 import QRCode from "qrcode";
@@ -25,6 +26,19 @@ function StartAttendance() {
 
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState("");
+
+  // =========================================================
+  // CLASS SELECTION
+  // =========================================================
+  const [selectedClass, setSelectedClass] = useState("");
+
+  const classOptions = [
+    "Class A",
+    "Class B",
+    "Class C",
+    "Class D",
+    "Class E",
+  ];
 
   // Lecturer enters attendance duration manually.
   const [duration, setDuration] = useState("15");
@@ -54,6 +68,12 @@ function StartAttendance() {
     if (location.state?.selectedCourse) {
       setSelectedCourse(
         location.state.selectedCourse
+      );
+    }
+
+    if (location.state?.selectedClass) {
+      setSelectedClass(
+        location.state.selectedClass
       );
     }
   }, [location.state]);
@@ -116,6 +136,7 @@ function StartAttendance() {
 
     const updateCountdown = () => {
       const now = Date.now();
+
       const end = new Date(
         session.endTime
       ).getTime();
@@ -193,6 +214,7 @@ function StartAttendance() {
       setRemainingSeconds(null);
       setLecturerLocation(null);
       setSelectedCourse("");
+      setSelectedClass("");
 
       setApiError(
         "Attendance session ended automatically."
@@ -467,6 +489,16 @@ function StartAttendance() {
       return;
     }
 
+    // =======================================================
+    // VALIDATE CLASS
+    // =======================================================
+    if (!selectedClass) {
+      setApiError(
+        "Please select a class."
+      );
+      return;
+    }
+
     // ==========================================
     // VALIDATE DURATION
     // ==========================================
@@ -589,6 +621,12 @@ function StartAttendance() {
               courseAssignmentId:
                 selectedCourse,
 
+              // =================================================
+              // CLASS
+              // =================================================
+              className:
+                selectedClass,
+
               // Lecturer-entered duration
               duration:
                 durationMinutes,
@@ -689,6 +727,7 @@ function StartAttendance() {
       setQrError("");
       setRemainingSeconds(null);
       setSelectedCourse("");
+      setSelectedClass("");
       setLecturerLocation(null);
     } catch (error) {
       console.error(
@@ -723,9 +762,8 @@ function StartAttendance() {
           </h2>
 
           <p>
-            Select one of your assigned
-            courses and set the attendance
-            duration.
+            Select a course, class and
+            attendance duration.
           </p>
 
           <form
@@ -791,6 +829,61 @@ function StartAttendance() {
                   )
                 )}
               </select>
+            </div>
+
+            {/* CLASS */}
+            <div className="form-group">
+              <label>
+                <FaUsers /> Class
+              </label>
+
+              <select
+                value={
+                  selectedClass
+                }
+                onChange={(e) =>
+                  setSelectedClass(
+                    e.target.value
+                  )
+                }
+                disabled={
+                  !!session ||
+                  gettingLocation
+                }
+              >
+                <option value="">
+                  Select Class
+                </option>
+
+                {classOptions.map(
+                  (className) => (
+                    <option
+                      key={
+                        className
+                      }
+                      value={
+                        className
+                      }
+                    >
+                      {className}
+                    </option>
+                  )
+                )}
+              </select>
+
+              <small
+                style={{
+                  display:
+                    "block",
+                  marginTop:
+                    "6px",
+                  color: "#666",
+                }}
+              >
+                Select the class
+                whose attendance
+                you are taking.
+              </small>
             </div>
 
             {/* DURATION */}
@@ -982,6 +1075,29 @@ function StartAttendance() {
                   Attendance QR Code
                 </h2>
 
+                {/* SESSION CLASS */}
+                <div
+                  style={{
+                    marginBottom:
+                      "15px",
+                    padding:
+                      "10px 14px",
+                    borderRadius:
+                      "8px",
+                    background:
+                      "#f3f7ff",
+                    border:
+                      "1px solid #d8e5ff",
+                    textAlign:
+                      "center",
+                  }}
+                >
+                  <strong>
+                    {session.className ||
+                      selectedClass}
+                  </strong>
+                </div>
+
                 {qrSrc ? (
                   <img
                     src={qrSrc}
@@ -1150,6 +1266,7 @@ function StartAttendance() {
                 disabled={
                   loading ||
                   !selectedCourse ||
+                  !selectedClass ||
                   gettingLocation
                 }
               >
