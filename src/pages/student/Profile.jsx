@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
 
@@ -13,14 +12,20 @@ import {
   FaLock,
   FaEye,
   FaEyeSlash,
+  FaLayerGroup,
 } from "react-icons/fa";
 
 import API_URL from "../../config/api";
 
 function Profile() {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const storedUser = JSON.parse(
+    localStorage.getItem("user") || "null"
+  );
 
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [user, setUser] = useState(storedUser);
+
+  const [showPasswordForm, setShowPasswordForm] =
+    useState(false);
 
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -34,10 +39,81 @@ function Profile() {
     confirm: false,
   });
 
-  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] =
+    useState(false);
 
-  const [passwordMessage, setPasswordMessage] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [passwordMessage, setPasswordMessage] =
+    useState("");
+
+  const [passwordError, setPasswordError] =
+    useState("");
+
+  const [profileLoading, setProfileLoading] =
+    useState(true);
+
+  // ========================================
+  // LOAD CURRENT STUDENT PROFILE
+  // ========================================
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const token = localStorage.getItem("token");
+
+        const studentId =
+          storedUser?.id || storedUser?._id;
+
+        if (!studentId) {
+          setProfileLoading(false);
+          return;
+        }
+
+        const response = await fetch(
+          `${API_URL}/api/users/${studentId}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+              "Failed to load profile."
+          );
+        }
+
+        if (data.user) {
+          setUser(data.user);
+
+          // Update localStorage so the latest
+          // className is available elsewhere too.
+          localStorage.setItem(
+            "user",
+            JSON.stringify(data.user)
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Load profile error:",
+          error
+        );
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+
+    loadProfile();
+  }, []);
+
+  // ========================================
+  // PASSWORD CHANGE
+  // ========================================
 
   function handlePasswordChange(e) {
     setPasswordForm({
@@ -57,7 +133,9 @@ function Profile() {
       !passwordForm.newPassword ||
       !passwordForm.confirmPassword
     ) {
-      setPasswordError("Please fill in all password fields.");
+      setPasswordError(
+        "Please fill in all password fields."
+      );
       return;
     }
 
@@ -72,7 +150,9 @@ function Profile() {
       passwordForm.newPassword !==
       passwordForm.confirmPassword
     ) {
-      setPasswordError("New passwords do not match.");
+      setPasswordError(
+        "New passwords do not match."
+      );
       return;
     }
 
@@ -90,8 +170,10 @@ function Profile() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            currentPassword: passwordForm.currentPassword,
-            newPassword: passwordForm.newPassword,
+            currentPassword:
+              passwordForm.currentPassword,
+            newPassword:
+              passwordForm.newPassword,
           }),
         }
       );
@@ -100,7 +182,8 @@ function Profile() {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to change password."
+          data.message ||
+            "Failed to change password."
         );
       }
 
@@ -113,7 +196,6 @@ function Profile() {
         newPassword: "",
         confirmPassword: "",
       });
-
     } catch (error) {
       console.error(
         "Change password error:",
@@ -144,21 +226,25 @@ function Profile() {
       <div className="student-profile-page">
 
         {/* PAGE HEADING */}
+
         <div className="profile-heading">
           <div>
             <h1>My Profile</h1>
 
             <p>
-              View and manage your personal information.
+              View and manage your personal
+              information.
             </p>
           </div>
         </div>
 
 
         {/* PROFILE CARD */}
+
         <div className="profile-card">
 
           {/* PROFILE HEADER */}
+
           <div className="profile-card-header">
 
             <div className="profile-avatar">
@@ -166,6 +252,7 @@ function Profile() {
             </div>
 
             <div className="profile-name">
+
               <h2>
                 {user?.name || "Student"}
               </h2>
@@ -173,87 +260,169 @@ function Profile() {
               <span>
                 Student
               </span>
+
             </div>
 
           </div>
 
 
           {/* INFORMATION */}
-          <div className="profile-information">
 
-            <div className="profile-info-item">
+          {profileLoading ? (
+            <div className="profile-loading">
+              Loading profile...
+            </div>
+          ) : (
+            <div className="profile-information">
 
-              <div className="profile-info-icon">
-                <FaUser />
+              {/* FULL NAME */}
+
+              <div className="profile-info-item">
+
+                <div className="profile-info-icon">
+                  <FaUser />
+                </div>
+
+                <div>
+                  <span>Full Name</span>
+
+                  <strong>
+                    {user?.name || "N/A"}
+                  </strong>
+                </div>
+
               </div>
 
-              <div>
-                <span>Full Name</span>
 
-                <strong>
-                  {user?.name || "N/A"}
-                </strong>
+              {/* EMAIL */}
+
+              <div className="profile-info-item">
+
+                <div className="profile-info-icon">
+                  <FaEnvelope />
+                </div>
+
+                <div>
+                  <span>
+                    Email Address
+                  </span>
+
+                  <strong>
+                    {user?.email || "N/A"}
+                  </strong>
+                </div>
+
+              </div>
+
+
+              {/* STUDENT ID */}
+
+              <div className="profile-info-item">
+
+                <div className="profile-info-icon">
+                  <FaIdCard />
+                </div>
+
+                <div>
+                  <span>Student ID</span>
+
+                  <strong>
+                    {user?.indexNumber ||
+                      user?.id ||
+                      user?._id ||
+                      "N/A"}
+                  </strong>
+                </div>
+
+              </div>
+
+
+              {/* ROLE */}
+
+              <div className="profile-info-item">
+
+                <div className="profile-info-icon">
+                  <FaGraduationCap />
+                </div>
+
+                <div>
+                  <span>Role</span>
+
+                  <strong>
+                    {user?.role ||
+                      "Student"}
+                  </strong>
+                </div>
+
+              </div>
+
+
+              {/* DEPARTMENT */}
+
+              <div className="profile-info-item">
+
+                <div className="profile-info-icon">
+                  <FaGraduationCap />
+                </div>
+
+                <div>
+                  <span>Department</span>
+
+                  <strong>
+                    {user?.department ||
+                      "N/A"}
+                  </strong>
+                </div>
+
+              </div>
+
+
+              {/* LEVEL */}
+
+              <div className="profile-info-item">
+
+                <div className="profile-info-icon">
+                  <FaLayerGroup />
+                </div>
+
+                <div>
+                  <span>Level</span>
+
+                  <strong>
+                    {user?.level || "N/A"}
+                  </strong>
+                </div>
+
+              </div>
+
+
+              {/* CLASS */}
+
+              <div className="profile-info-item">
+
+                <div className="profile-info-icon">
+                  <FaGraduationCap />
+                </div>
+
+                <div>
+                  <span>Class</span>
+
+                  <strong>
+                    {user?.className ||
+                      "Not Assigned"}
+                  </strong>
+                </div>
+
               </div>
 
             </div>
-
-
-            <div className="profile-info-item">
-
-              <div className="profile-info-icon">
-                <FaEnvelope />
-              </div>
-
-              <div>
-                <span>Email Address</span>
-
-                <strong>
-                  {user?.email || "N/A"}
-                </strong>
-              </div>
-
-            </div>
-
-
-            <div className="profile-info-item">
-
-              <div className="profile-info-icon">
-                <FaIdCard />
-              </div>
-
-              <div>
-                <span>Student ID</span>
-
-                <strong>
-                  {user?.id || "N/A"}
-                </strong>
-              </div>
-
-            </div>
-
-
-            <div className="profile-info-item">
-
-              <div className="profile-info-icon">
-                <FaGraduationCap />
-              </div>
-
-              <div>
-                <span>Role</span>
-
-                <strong>
-                  {user?.role || "Student"}
-                </strong>
-              </div>
-
-            </div>
-
-          </div>
+          )}
 
         </div>
 
 
         {/* CHANGE PASSWORD */}
+
         <div className="password-card">
 
           <div className="password-card-header">
@@ -291,10 +460,13 @@ function Profile() {
 
             <form
               className="password-form"
-              onSubmit={handleChangePassword}
+              onSubmit={
+                handleChangePassword
+              }
             >
 
               {/* CURRENT PASSWORD */}
+
               <div className="password-field">
 
                 <label>
@@ -319,13 +491,17 @@ function Profile() {
                       handlePasswordChange
                     }
                     placeholder="Enter current password"
-                    disabled={passwordLoading}
+                    disabled={
+                      passwordLoading
+                    }
                   />
 
                   <button
                     type="button"
                     onClick={() =>
-                      togglePassword("current")
+                      togglePassword(
+                        "current"
+                      )
                     }
                   >
                     {showPasswords.current ? (
@@ -341,6 +517,7 @@ function Profile() {
 
 
               {/* NEW PASSWORD */}
+
               <div className="password-field">
 
                 <label>
@@ -365,7 +542,9 @@ function Profile() {
                       handlePasswordChange
                     }
                     placeholder="Enter new password"
-                    disabled={passwordLoading}
+                    disabled={
+                      passwordLoading
+                    }
                   />
 
                   <button
@@ -387,6 +566,7 @@ function Profile() {
 
 
               {/* CONFIRM PASSWORD */}
+
               <div className="password-field">
 
                 <label>
@@ -411,13 +591,17 @@ function Profile() {
                       handlePasswordChange
                     }
                     placeholder="Confirm new password"
-                    disabled={passwordLoading}
+                    disabled={
+                      passwordLoading
+                    }
                   />
 
                   <button
                     type="button"
                     onClick={() =>
-                      togglePassword("confirm")
+                      togglePassword(
+                        "confirm"
+                      )
                     }
                   >
                     {showPasswords.confirm ? (
@@ -433,6 +617,7 @@ function Profile() {
 
 
               {/* ERROR */}
+
               {passwordError && (
                 <div className="password-error">
                   {passwordError}
@@ -441,6 +626,7 @@ function Profile() {
 
 
               {/* SUCCESS */}
+
               {passwordMessage && (
                 <div className="password-success">
                   {passwordMessage}
@@ -449,10 +635,13 @@ function Profile() {
 
 
               {/* SUBMIT */}
+
               <button
                 type="submit"
                 className="change-password-btn"
-                disabled={passwordLoading}
+                disabled={
+                  passwordLoading
+                }
               >
                 {passwordLoading
                   ? "Changing Password..."
