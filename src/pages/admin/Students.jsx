@@ -15,8 +15,6 @@ import {
 
 import API_URL from "../../config/api";
 
-
-
 function Students() {
   const [students, setStudents] = useState([]);
 
@@ -26,6 +24,7 @@ function Students() {
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [levelFilter, setLevelFilter] = useState("");
+  const [classFilter, setClassFilter] = useState("");
 
   // Controls whether search suggestions are visible
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -86,6 +85,17 @@ function Students() {
   const levels = ["100", "200", "300", "400"];
 
   // =========================
+  // CLASSES
+  // =========================
+  const classes = [
+    "Class A",
+    "Class B",
+    "Class C",
+    "Class D",
+    "Class E",
+  ];
+
+  // =========================
   // SEARCH SUGGESTIONS
   // =========================
   const searchSuggestions = useMemo(() => {
@@ -105,6 +115,7 @@ function Students() {
       const level = student.level
         ? `Level ${student.level}`
         : "";
+      const className = student.className || "";
 
       const values = [
         {
@@ -126,6 +137,10 @@ function Students() {
         {
           value: level,
           type: "Level",
+        },
+        {
+          value: className,
+          type: "Class",
         },
       ];
 
@@ -162,21 +177,34 @@ function Students() {
 
     return students.filter((student) => {
       const studentLevel = student.level
-  ? `level ${student.level}`.toLowerCase()
-  : "";
+        ? `level ${student.level}`.toLowerCase()
+        : "";
 
-const rawLevel = student.level
-  ? student.level.toString().toLowerCase()
-  : "";
+      const rawLevel = student.level
+        ? student.level.toString().toLowerCase()
+        : "";
 
-const matchesSearch =
-  !searchText ||
-  student.name?.toLowerCase().includes(searchText) ||
-  student.indexNumber?.toLowerCase().includes(searchText) ||
-  student.email?.toLowerCase().includes(searchText) ||
-  student.department?.toLowerCase().includes(searchText) ||
-  studentLevel.includes(searchText) ||
-  rawLevel.includes(searchText);
+      const studentClass = student.className
+        ? student.className.toString().toLowerCase()
+        : "";
+
+      const matchesSearch =
+        !searchText ||
+        student.name
+          ?.toLowerCase()
+          .includes(searchText) ||
+        student.indexNumber
+          ?.toLowerCase()
+          .includes(searchText) ||
+        student.email
+          ?.toLowerCase()
+          .includes(searchText) ||
+        student.department
+          ?.toLowerCase()
+          .includes(searchText) ||
+        studentLevel.includes(searchText) ||
+        rawLevel.includes(searchText) ||
+        studentClass.includes(searchText);
 
       const matchesDepartment =
         !departmentFilter ||
@@ -186,10 +214,15 @@ const matchesSearch =
         !levelFilter ||
         student.level?.toString() === levelFilter;
 
+      const matchesClass =
+        !classFilter ||
+        student.className === classFilter;
+
       return (
         matchesSearch &&
         matchesDepartment &&
-        matchesLevel
+        matchesLevel &&
+        matchesClass
       );
     });
   }, [
@@ -197,6 +230,7 @@ const matchesSearch =
     search,
     departmentFilter,
     levelFilter,
+    classFilter,
   ]);
 
   // =========================
@@ -206,6 +240,7 @@ const matchesSearch =
     setSearch("");
     setDepartmentFilter("");
     setLevelFilter("");
+    setClassFilter("");
     setShowSuggestions(false);
   }
 
@@ -339,6 +374,7 @@ const matchesSearch =
       indexNumber: student.indexNumber || "",
       department: student.department || "",
       level: student.level?.toString() || "",
+      className: student.className || "",
     });
   }
 
@@ -382,7 +418,6 @@ const matchesSearch =
 
         </div>
 
-
         {/* =========================================
             FILTER CARD
         ========================================= */}
@@ -398,7 +433,6 @@ const matchesSearch =
 
           </div>
 
-
           <div className="student-filters">
 
             {/* SEARCH */}
@@ -410,7 +444,7 @@ const matchesSearch =
 
                 <input
                   type="text"
-                  placeholder="Search by name, index number, email, department or level..."
+                  placeholder="Search by name, index number, email, department, level or class..."
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
@@ -431,7 +465,6 @@ const matchesSearch =
                 />
 
               </div>
-
 
               {/* LIVE SEARCH SUGGESTIONS */}
               {showSuggestions &&
@@ -491,7 +524,6 @@ const matchesSearch =
 
             </div>
 
-
             {/* DEPARTMENT FILTER */}
             <div className="student-select-wrapper">
 
@@ -527,7 +559,6 @@ const matchesSearch =
 
             </div>
 
-
             {/* LEVEL FILTER */}
             <div className="student-select-wrapper">
 
@@ -561,6 +592,38 @@ const matchesSearch =
 
             </div>
 
+            {/* CLASS FILTER */}
+            <div className="student-select-wrapper">
+
+              <select
+                value={classFilter}
+                onChange={(e) =>
+                  setClassFilter(
+                    e.target.value
+                  )
+                }
+              >
+
+                <option value="">
+                  All Classes
+                </option>
+
+                {classes.map((className) => (
+
+                  <option
+                    key={className}
+                    value={className}
+                  >
+                    {className}
+                  </option>
+
+                ))}
+
+              </select>
+
+              <FaChevronDown />
+
+            </div>
 
             {/* CLEAR FILTER */}
             <button
@@ -572,7 +635,6 @@ const matchesSearch =
             </button>
 
           </div>
-
 
           {/* FILTER RESULT */}
           <div className="filter-result">
@@ -592,7 +654,8 @@ const matchesSearch =
             students
 
             {(departmentFilter ||
-              levelFilter) && (
+              levelFilter ||
+              classFilter) && (
 
               <span className="active-filter-text">
 
@@ -609,6 +672,14 @@ const matchesSearch =
                 {levelFilter &&
                   `Level ${levelFilter}`}
 
+                {(departmentFilter ||
+                  levelFilter) &&
+                  classFilter &&
+                  " • "}
+
+                {classFilter &&
+                  classFilter}
+
               </span>
 
             )}
@@ -616,7 +687,6 @@ const matchesSearch =
           </div>
 
         </div>
-
 
         {/* =========================================
             STUDENTS TABLE
@@ -643,6 +713,8 @@ const matchesSearch =
 
                   <th>Level</th>
 
+                  <th>Class</th>
+
                   <th>Status</th>
 
                   <th>Actions</th>
@@ -650,7 +722,6 @@ const matchesSearch =
                 </tr>
 
               </thead>
-
 
               <tbody>
 
@@ -666,7 +737,6 @@ const matchesSearch =
                           {index + 1}
                         </td>
 
-
                         {/* STUDENT */}
                         <td>
 
@@ -679,7 +749,6 @@ const matchesSearch =
                                 ?.toUpperCase()}
 
                             </div>
-
 
                             <div>
 
@@ -698,7 +767,6 @@ const matchesSearch =
 
                         </td>
 
-
                         {/* INDEX NUMBER */}
                         <td>
 
@@ -706,7 +774,6 @@ const matchesSearch =
                             "N/A"}
 
                         </td>
-
 
                         {/* EMAIL */}
                         <td>
@@ -716,7 +783,6 @@ const matchesSearch =
 
                         </td>
 
-
                         {/* DEPARTMENT */}
                         <td>
 
@@ -724,7 +790,6 @@ const matchesSearch =
                             "N/A"}
 
                         </td>
-
 
                         {/* LEVEL */}
                         <td>
@@ -735,6 +800,13 @@ const matchesSearch =
 
                         </td>
 
+                        {/* CLASS */}
+                        <td>
+
+                          {student.className ||
+                            "Not Assigned"}
+
+                        </td>
 
                         {/* STATUS */}
                         <td>
@@ -755,7 +827,6 @@ const matchesSearch =
 
                         </td>
 
-
                         {/* ACTIONS */}
                         <td className="action-buttons">
 
@@ -773,7 +844,6 @@ const matchesSearch =
                             <FaEye />
                           </button>
 
-
                           {/* EDIT */}
                           <button
                             type="button"
@@ -787,7 +857,6 @@ const matchesSearch =
                           >
                             <FaEdit />
                           </button>
-
 
                           {/* DELETE */}
                           <button
@@ -816,7 +885,7 @@ const matchesSearch =
                   <tr>
 
                     <td
-                      colSpan="8"
+                      colSpan="9"
                       className="no-students"
                     >
 
@@ -850,7 +919,6 @@ const matchesSearch =
         </div>
 
       </DashboardLayout>
-
 
       {/* =========================================
           VIEW STUDENT MODAL
@@ -886,7 +954,6 @@ const matchesSearch =
 
               </div>
 
-
               <button
                 type="button"
                 className="modal-close-icon"
@@ -899,7 +966,6 @@ const matchesSearch =
 
             </div>
 
-
             {/* STUDENT PROFILE */}
             <div className="student-profile-modal">
 
@@ -911,12 +977,10 @@ const matchesSearch =
 
               </div>
 
-
               <h3>
                 {selectedStudent.name ||
                   "Student"}
               </h3>
-
 
               <span>
                 {selectedStudent.email ||
@@ -924,7 +988,6 @@ const matchesSearch =
               </span>
 
             </div>
-
 
             {/* STUDENT INFORMATION */}
             <div className="student-info">
@@ -942,7 +1005,6 @@ const matchesSearch =
 
               </p>
 
-
               <p>
 
                 <strong>
@@ -955,7 +1017,6 @@ const matchesSearch =
                 </span>
 
               </p>
-
 
               <p>
 
@@ -971,6 +1032,18 @@ const matchesSearch =
 
               </p>
 
+              <p>
+
+                <strong>
+                  Class
+                </strong>
+
+                <span>
+                  {selectedStudent.className ||
+                    "Not Assigned"}
+                </span>
+
+              </p>
 
               <p>
 
@@ -990,7 +1063,6 @@ const matchesSearch =
 
             </div>
 
-
             {/* CLOSE */}
             <button
               type="button"
@@ -1007,7 +1079,6 @@ const matchesSearch =
         </div>
 
       )}
-
 
       {/* =========================================
           EDIT STUDENT MODAL
@@ -1047,7 +1118,6 @@ const matchesSearch =
 
               </div>
 
-
               <button
                 type="button"
                 className="modal-close-icon"
@@ -1060,7 +1130,6 @@ const matchesSearch =
               </button>
 
             </div>
-
 
             {/* EDIT FORM */}
             <form
@@ -1090,7 +1159,6 @@ const matchesSearch =
 
                 </label>
 
-
                 {/* EMAIL */}
                 <label>
 
@@ -1112,7 +1180,6 @@ const matchesSearch =
                   />
 
                 </label>
-
 
                 {/* INDEX NUMBER */}
                 <label>
@@ -1136,7 +1203,6 @@ const matchesSearch =
 
                 </label>
 
-
                 {/* DEPARTMENT */}
                 <label>
 
@@ -1158,7 +1224,6 @@ const matchesSearch =
                   />
 
                 </label>
-
 
                 {/* LEVEL */}
                 <label>
@@ -1198,8 +1263,44 @@ const matchesSearch =
 
                 </label>
 
-              </div>
+                {/* CLASS */}
+                <label>
 
+                  Class
+
+                  <select
+                    value={
+                      editForm.className || ""
+                    }
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        className:
+                          e.target.value,
+                      })
+                    }
+                  >
+
+                    <option value="">
+                      Not Assigned
+                    </option>
+
+                    {classes.map((className) => (
+
+                      <option
+                        key={className}
+                        value={className}
+                      >
+                        {className}
+                      </option>
+
+                    ))}
+
+                  </select>
+
+                </label>
+
+              </div>
 
               {/* EDIT ACTIONS */}
               <div className="edit-actions">
@@ -1214,7 +1315,6 @@ const matchesSearch =
                 >
                   Cancel
                 </button>
-
 
                 <button
                   type="submit"
