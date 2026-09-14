@@ -15,7 +15,7 @@ import * as XLSX from "xlsx";
 import API_URL from "../../config/api";
 
 import "../../styles/Dashboard.css";
-import "../../styles/AttendanceHistory.css";
+import "../../styles/attendanceHistory.css";
 
 function AttendanceHistory() {
   const [sessions, setSessions] = useState([]);
