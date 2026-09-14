@@ -14,7 +14,7 @@ import * as XLSX from "xlsx";
 import API_URL from "../../config/api";
 
 import "../../styles/Dashboard.css";
-import "../../styles/Reports.css";
+import "../../styles/adminReports.css";
 
 function Reports() {
   const [attendance, setAttendance] = useState([]);
