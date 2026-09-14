@@ -1,462 +1,398 @@
-import { useEffect, useState } from "react";
-import DashboardLayout from "../../layouts/DashboardLayout";
-import "../../styles/adminReports.css";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  FaCalendarAlt,
+  FaFileExcel,
+  FaFilePdf,
+  FaSearch,
+  FaTimes,
+  FaDownload,
+} from "react-icons/fa";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+
 import API_URL from "../../config/api";
 
+import "../../styles/Dashboard.css";
+import "../../styles/Reports.css";
 
 function Reports() {
   const [attendance, setAttendance] = useState([]);
-  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState("");
+
+  const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  
 
-  useEffect(() => {
-    loadAttendance();
-  }, []);
+  const [period, setPeriod] = useState("thisWeek");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
-  
-  async function loadAttendance() {
+  const [error, setError] = useState("");
+
+  // ==========================================================
+  // PERIOD LABEL
+  // ==========================================================
+  const periodLabel = useMemo(() => {
+    if (period === "thisWeek") {
+      return "This Week";
+    }
+
+    if (period === "lastWeek") {
+      return "Last Week";
+    }
+
+    if (period === "bothWeeks") {
+      return "This Week & Last Week";
+    }
+
+    if (period === "custom") {
+      if (fromDate && toDate) {
+        return `${fromDate} to ${toDate}`;
+      }
+
+      return "Custom Period";
+    }
+
+    return "All Time";
+  }, [period, fromDate, toDate]);
+
+  // ==========================================================
+  // FETCH ATTENDANCE
+  // ==========================================================
+  const fetchAttendance = async () => {
     try {
       setLoading(true);
+      setError("");
 
-      const response = await fetch(`${API_URL}/api/attendance/report`, {
+      const token = localStorage.getItem("token");
+
+      let url = `${API_URL}/api/attendance/report`;
+
+      const params = new URLSearchParams();
+
+      if (period && period !== "all") {
+        params.append("period", period);
+      }
+
+      if (period === "custom") {
+        if (!fromDate || !toDate) {
+          setAttendance([]);
+          setLoading(false);
+          return;
+        }
+
+        params.append("from", fromDate);
+        params.append("to", toDate);
+      }
+
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch attendance report");
-      }
-
       const data = await response.json();
 
-      setAttendance(data.attendance || []);
-    } catch (error) {
-      console.error("Error loading attendance report:", error);
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to fetch attendance records."
+        );
+      }
+
+      // Backend returns { attendance: [...] }
+      // but this also safely handles a direct array response.
+      setAttendance(
+        Array.isArray(data) ? data : data.attendance || []
+      );
+    } catch (err) {
+      console.error("Fetch attendance error:", err);
+
+      setError(
+        err.message || "Failed to load attendance records."
+      );
+
       setAttendance([]);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  function formatDate(date) {
-    if (!date) return "N/A";
+  // ==========================================================
+  // FETCH WHEN PERIOD CHANGES
+  // ==========================================================
+  useEffect(() => {
+    if (period === "custom") {
+      if (fromDate && toDate) {
+        fetchAttendance();
+      }
+    } else {
+      fetchAttendance();
+    }
+  }, [period, fromDate, toDate]);
 
-    const parsedDate = new Date(date);
+  // ==========================================================
+  // UNIQUE COURSES
+  // ==========================================================
+  const uniqueCourses = useMemo(() => {
+    const courses = attendance
+      .map((record) => record.course)
+      .filter(Boolean);
 
-    if (Number.isNaN(parsedDate.getTime())) {
-      return "N/A";
+    const map = new Map();
+
+    courses.forEach((course) => {
+      const id = course._id || course.courseCode;
+
+      if (!map.has(id)) {
+        map.set(id, course);
+      }
+    });
+
+    return Array.from(map.values());
+  }, [attendance]);
+
+  // ==========================================================
+  // FILTER ATTENDANCE
+  // ==========================================================
+  const filteredAttendance = useMemo(() => {
+    const searchValue = search.trim().toLowerCase();
+
+    return attendance.filter((record) => {
+      const studentName =
+        record.student?.name?.toLowerCase() || "";
+
+      const indexNumber =
+        record.student?.indexNumber?.toLowerCase() || "";
+
+      const courseName =
+        record.course?.courseName?.toLowerCase() || "";
+
+      const courseCode =
+        record.course?.courseCode?.toLowerCase() || "";
+
+      const lecturerName =
+        record.lecturer?.name?.toLowerCase() || "";
+
+      const matchesSearch =
+        !searchValue ||
+        studentName.includes(searchValue) ||
+        indexNumber.includes(searchValue) ||
+        courseName.includes(searchValue) ||
+        courseCode.includes(searchValue) ||
+        lecturerName.includes(searchValue);
+
+      const matchesCourse =
+        !courseFilter ||
+        record.course?.courseCode === courseFilter;
+
+      const matchesStatus =
+        !statusFilter ||
+        record.status === statusFilter;
+
+      return (
+        matchesSearch &&
+        matchesCourse &&
+        matchesStatus
+      );
+    });
+  }, [
+    attendance,
+    search,
+    courseFilter,
+    statusFilter,
+  ]);
+
+  // ==========================================================
+  // SUMMARY
+  // ==========================================================
+  const totalRecords = filteredAttendance.length;
+
+  const presentRecords = filteredAttendance.filter(
+    (record) => record.status === "Present"
+  ).length;
+
+  const absentRecords = filteredAttendance.filter(
+    (record) => record.status === "Absent"
+  ).length;
+
+  const uniqueStudents = new Set(
+    filteredAttendance
+      .map((record) => record.student?._id)
+      .filter(Boolean)
+  ).size;
+
+  const uniqueCoursesCount = new Set(
+    filteredAttendance
+      .map((record) => record.course?._id)
+      .filter(Boolean)
+  ).size;
+
+  // ==========================================================
+  // CLEAR FILTERS
+  // ==========================================================
+  const clearFilters = () => {
+    setSearch("");
+    setCourseFilter("");
+    setStatusFilter("");
+    setPeriod("thisWeek");
+    setFromDate("");
+    setToDate("");
+  };
+
+  // ==========================================================
+  // FORMAT DATE
+  // ==========================================================
+  const formatDate = (dateValue) => {
+    if (!dateValue) {
+      return "—";
     }
 
-    return parsedDate.toLocaleDateString();
-  }
+    const date = new Date(dateValue);
 
-  function formatTime(date) {
-    if (!date) return "N/A";
-
-    const parsedDate = new Date(date);
-
-    if (Number.isNaN(parsedDate.getTime())) {
-      return "N/A";
+    if (Number.isNaN(date.getTime())) {
+      return "—";
     }
 
-    return parsedDate.toLocaleTimeString([], {
+    return date.toLocaleDateString();
+  };
+
+  // ==========================================================
+  // FORMAT TIME
+  // ==========================================================
+  const formatTime = (dateValue) => {
+    if (!dateValue) {
+      return "—";
+    }
+
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) {
+      return "—";
+    }
+
+    return date.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
-  }
+  };
 
-  function getLocalDateString(date) {
-    if (!date) return "";
-
-    const parsedDate = new Date(date);
-
-    if (Number.isNaN(parsedDate.getTime())) {
-      return "";
-    }
-
-    const year = parsedDate.getFullYear();
-    const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
-    const day = String(parsedDate.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  }
-
-  const filteredAttendance = attendance.filter((record) => {
-    const searchValue = search.trim().toLowerCase();
-
-    const studentName =
-      record.student?.name?.toLowerCase() || "";
-
-    const indexNumber =
-      record.student?.indexNumber?.toLowerCase() || "";
-
-    const courseName =
-      record.course?.courseName?.toLowerCase() || "";
-
-    const courseCode =
-      record.course?.courseCode?.toLowerCase() || "";
-
-    const lecturerName =
-      record.lecturer?.name?.toLowerCase() || "";
-
-    const matchesSearch =
-      !searchValue ||
-      studentName.includes(searchValue) ||
-      indexNumber.includes(searchValue) ||
-      courseName.includes(searchValue) ||
-      courseCode.includes(searchValue) ||
-      lecturerName.includes(searchValue);
-
-    const matchesDate =
-      !dateFilter ||
-      getLocalDateString(record.scannedAt) === dateFilter;
-
-    const matchesCourse =
-      !courseFilter ||
-      record.course?._id === courseFilter;
-
-    const recordStatus = record.status || "Present";
-
-    const matchesStatus =
-      !statusFilter ||
-      recordStatus === statusFilter;
-
-    return (
-      matchesSearch &&
-      matchesDate &&
-      matchesCourse &&
-      matchesStatus
-    );
-  });
-
-  const totalRecords = attendance.length;
-
-  const today = new Date();
-
-  const todayDateString = getLocalDateString(today);
-
-  const todayRecords = attendance.filter(
-    (record) =>
-      getLocalDateString(record.scannedAt) === todayDateString
-  ).length;
-
-  const totalStudents = new Set(
-    attendance
-      .filter((record) => record.student?._id)
-      .map((record) => record.student._id)
-  ).size;
-
-  const totalCourses = new Set(
-    attendance
-      .filter((record) => record.course?._id)
-      .map((record) => record.course._id)
-  ).size;
-
-
-  function clearFilters() {
-    setSearch("");
-    setDateFilter("");
-    setCourseFilter("");
-    setStatusFilter("");
-  }
-
-  function exportPDF() {
-    if (filteredAttendance.length === 0) {
-      alert("There are no attendance records to export.");
+  // ==========================================================
+  // EXPORT PDF
+  // ==========================================================
+  const exportPDF = () => {
+    if (!filteredAttendance.length) {
+      alert("There are no attendance records to download.");
       return;
     }
 
-    const doc = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4",
-    });
+    const doc = new jsPDF("landscape");
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    // Title
     doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("Attendance Report", 14, 18);
+    doc.text("Attendance Report", 14, 15);
 
-    // Generated date
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-
+    doc.setFontSize(10);
+    doc.text(`Period: ${periodLabel}`, 14, 22);
     doc.text(
       `Generated: ${new Date().toLocaleString()}`,
       14,
-      25
+      28
     );
 
-    // Filter information
-    let filterText = "Filters: All Records";
+    const tableData = filteredAttendance.map((record) => [
+      record.student?.name || "—",
+      record.student?.indexNumber || "—",
+      record.course?.courseCode || "—",
+      record.course?.courseName || "—",
+      record.lecturer?.name || "—",
+      formatDate(record.scannedAt),
+      formatTime(record.scannedAt),
+      record.status || "—",
+    ]);
 
-    if (
-      search ||
-      dateFilter ||
-      courseFilter ||
-      statusFilter
-    ) {
-      const filters = [];
-
-      if (search) {
-        filters.push(`Search: ${search}`);
-      }
-
-      if (dateFilter) {
-        filters.push(`Date: ${dateFilter}`);
-      }
-
-      if (courseFilter) {
-        const selectedCourse = attendance.find(
-          (record) =>
-            record.course?._id === courseFilter
-        )?.course;
-
-        if (selectedCourse) {
-          filters.push(
-            `Course: ${selectedCourse.courseCode}`
-          );
-        }
-      }
-
-      if (statusFilter) {
-        filters.push(`Status: ${statusFilter}`);
-      }
-
-      filterText = `Filters: ${filters.join(" | ")}`;
-    }
-
-    doc.text(filterText, 14, 31);
-
-    // Table configuration
-    const columns = [
-      {
-        title: "#",
-        width: 10,
+    autoTable(doc, {
+      startY: 35,
+      head: [
+        [
+          "Student",
+          "Index Number",
+          "Course Code",
+          "Course",
+          "Lecturer",
+          "Date",
+          "Time",
+          "Status",
+        ],
+      ],
+      body: tableData,
+      styles: {
+        fontSize: 8,
       },
-      {
-        title: "Student",
-        width: 42,
+      headStyles: {
+        fontSize: 8,
       },
-      {
-        title: "Index Number",
-        width: 35,
-      },
-      {
-        title: "Course",
-        width: 35,
-      },
-      {
-        title: "Lecturer",
-        width: 42,
-      },
-      {
-        title: "Date",
-        width: 28,
-      },
-      {
-        title: "Time",
-        width: 25,
-      },
-      {
-        title: "Status",
-        width: 25,
-      },
-    ];
-
-    const startX = 10;
-    let y = 40;
-    const rowHeight = 8;
-
-    // Draw table header
-    function drawHeader() {
-      let x = startX;
-
-      doc.setFillColor(41, 98, 255);
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-
-      columns.forEach((column) => {
-        doc.rect(
-          x,
-          y,
-          column.width,
-          rowHeight,
-          "F"
-        );
-
-        doc.text(
-          column.title,
-          x + 2,
-          y + 5
-        );
-
-        x += column.width;
-      });
-
-      doc.setTextColor(0, 0, 0);
-
-      y += rowHeight;
-    }
-
-    drawHeader();
-
-    // Draw rows
-    filteredAttendance.forEach((record, index) => {
-      // Add new page when needed
-      if (y > pageHeight - 20) {
-        doc.addPage();
-        y = 15;
-        drawHeader();
-      }
-
-      const rowData = [
-        String(index + 1),
-        record.student?.name || "N/A",
-        record.student?.indexNumber || "N/A",
-        record.course?.courseCode || "N/A",
-        record.lecturer?.name || "N/A",
-        formatDate(record.scannedAt),
-        formatTime(record.scannedAt),
-        record.status || "Present",
-      ];
-
-      let x = startX;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-
-      columns.forEach((column, columnIndex) => {
-        // Alternate row color
-        if (index % 2 === 0) {
-          doc.setFillColor(245, 247, 250);
-          doc.rect(
-            x,
-            y,
-            column.width,
-            rowHeight,
-            "F"
-          );
-        }
-
-        doc.setDrawColor(210, 210, 210);
-        doc.rect(
-          x,
-          y,
-          column.width,
-          rowHeight
-        );
-
-        const value = rowData[columnIndex];
-
-        const text = doc.splitTextToSize(
-          value,
-          column.width - 4
-        );
-
-        doc.text(
-          text[0] || "",
-          x + 2,
-          y + 5
-        );
-
-        x += column.width;
-      });
-
-      y += rowHeight;
     });
 
-    // Footer
-    const totalPages =
-      doc.internal.getNumberOfPages();
+    doc.save(
+      `attendance-report-${period
+        .replace(/\s+/g, "-")
+        .toLowerCase()}.pdf`
+    );
+  };
 
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(100, 100, 100);
-
-      doc.text(
-        `Page ${i} of ${totalPages}`,
-        pageWidth - 35,
-        pageHeight - 8
-      );
-    }
-
-    doc.save("attendance-report.pdf");
-  }
-
-  // =========================
+  // ==========================================================
   // EXPORT EXCEL
-  // =========================
-  function exportExcel() {
-    if (filteredAttendance.length === 0) {
-      alert("There are no attendance records to export.");
+  // ==========================================================
+  const exportExcel = () => {
+    if (!filteredAttendance.length) {
+      alert("There are no attendance records to download.");
       return;
     }
 
-    const excelData = filteredAttendance.map(
-      (record, index) => ({
-        "#": index + 1,
-        Student:
-          record.student?.name || "N/A",
+    const rows = filteredAttendance.map((record) => ({
+      Student:
+        record.student?.name || "—",
 
-        "Index Number":
-          record.student?.indexNumber || "N/A",
+      "Index Number":
+        record.student?.indexNumber || "—",
 
-        "Course Code":
-          record.course?.courseCode || "N/A",
+      "Department":
+        record.student?.department || "—",
 
-        "Course Name":
-          record.course?.courseName || "N/A",
+      Level:
+        record.student?.level || "—",
 
-        Lecturer:
-          record.lecturer?.name || "N/A",
+      Class:
+        record.student?.className || "—",
 
-        Date:
-          formatDate(record.scannedAt),
+      "Course Code":
+        record.course?.courseCode || "—",
 
-        Time:
-          formatTime(record.scannedAt),
+      Course:
+        record.course?.courseName || "—",
 
-        Status:
-          record.status || "Present",
-      })
-    );
+      Lecturer:
+        record.lecturer?.name || "—",
 
-    // Create worksheet
-    const worksheet =
-      XLSX.utils.json_to_sheet(excelData);
+      Date:
+        formatDate(record.scannedAt),
 
-    // Set column widths
-    worksheet["!cols"] = [
-      { wch: 6 },
-      { wch: 25 },
-      { wch: 18 },
-      { wch: 15 },
-      { wch: 30 },
-      { wch: 25 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-    ];
+      Time:
+        formatTime(record.scannedAt),
 
-    // Create workbook
-    const workbook =
-      XLSX.utils.book_new();
+      Status:
+        record.status || "—",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    const workbook = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(
       workbook,
@@ -464,181 +400,162 @@ function Reports() {
       "Attendance"
     );
 
-    // Create filename with date
-    const currentDate =
-      new Date()
-        .toISOString()
-        .split("T")[0];
-
-    const filename =
-      `attendance-report-${currentDate}.xlsx`;
-
-    // Download Excel file
     XLSX.writeFile(
       workbook,
-      filename
+      `attendance-report-${period
+        .replace(/\s+/g, "-")
+        .toLowerCase()}.xlsx`
     );
-  }
+  };
 
-  // =========================
-  // UNIQUE COURSES
-  // =========================
-  const uniqueCourses = [
-    ...new Map(
-      attendance
-        .filter(
-          (record) =>
-            record.course?._id
-        )
-        .map((record) => [
-          record.course._id,
-          record.course,
-        ])
-    ).values(),
-  ];
-
-  // =========================
-  // RENDER
-  // =========================
   return (
-    <DashboardLayout
-      title="Attendance Reports"
-      role="admin"
-    >
-      <div className="reports-page">
+    <div className="reports-page">
 
-        {/* PAGE HEADING */}
-        <div className="page-heading">
+      {/* =====================================================
+          PAGE HEADER
+      ===================================================== */}
+      <div className="page-header">
+        <div>
+          <h1>Attendance Reports</h1>
+          <p>
+            View, filter and download attendance records by period.
+          </p>
+        </div>
+      </div>
 
+
+      {/* =====================================================
+          PERIOD FILTER
+      ===================================================== */}
+      <div className="report-period-card">
+
+        <div className="report-period-title">
+          <FaCalendarAlt />
           <div>
-            <h1>
-              Attendance Reports
-            </h1>
-
+            <h3>Attendance Period</h3>
             <p>
-              View and monitor attendance
-              records across the system.
+              Select the period you want to view or download.
             </p>
           </div>
+        </div>
 
-          <div className="export-buttons">
+        <div className="period-options">
 
-            <button
-              type="button"
-              className="export-pdf-btn"
-              onClick={exportPDF}
-              disabled={
-                loading ||
-                filteredAttendance.length === 0
-              }
-            >
-              📄 Export PDF
-            </button>
+          <button
+            type="button"
+            className={
+              period === "thisWeek"
+                ? "period-button active"
+                : "period-button"
+            }
+            onClick={() => setPeriod("thisWeek")}
+          >
+            This Week
+          </button>
 
-            <button
-              type="button"
-              className="export-excel-btn"
-              onClick={exportExcel}
-              disabled={
-                loading ||
-                filteredAttendance.length === 0
-              }
-            >
-              📊 Export Excel
-            </button>
+          <button
+            type="button"
+            className={
+              period === "lastWeek"
+                ? "period-button active"
+                : "period-button"
+            }
+            onClick={() => setPeriod("lastWeek")}
+          >
+            Last Week
+          </button>
 
-          </div>
+          <button
+            type="button"
+            className={
+              period === "bothWeeks"
+                ? "period-button active"
+                : "period-button"
+            }
+            onClick={() => setPeriod("bothWeeks")}
+          >
+            Both Weeks
+          </button>
+
+          <button
+            type="button"
+            className={
+              period === "all"
+                ? "period-button active"
+                : "period-button"
+            }
+            onClick={() => setPeriod("all")}
+          >
+            All Time
+          </button>
+
+          <button
+            type="button"
+            className={
+              period === "custom"
+                ? "period-button active"
+                : "period-button"
+            }
+            onClick={() => setPeriod("custom")}
+          >
+            Custom Period
+          </button>
 
         </div>
 
-        {/* REPORT CARDS */}
-        <div className="report-cards">
+        {/* Custom dates */}
+        {period === "custom" && (
+          <div className="custom-period-fields">
 
-          <div className="report-card">
-            <div className="report-card-icon">
-              📊
+            <div className="filter-group">
+              <label>From</label>
+
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) =>
+                  setFromDate(e.target.value)
+                }
+              />
             </div>
 
-            <div>
-              <span>
-                Total Records
-              </span>
+            <div className="filter-group">
+              <label>To</label>
 
-              <strong>
-                {totalRecords}
-              </strong>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) =>
+                  setToDate(e.target.value)
+                }
+              />
             </div>
+
           </div>
+        )}
 
-          <div className="report-card">
-            <div className="report-card-icon">
-              📅
-            </div>
+      </div>
 
-            <div>
-              <span>
-                Today
-              </span>
 
-              <strong>
-                {todayRecords}
-              </strong>
-            </div>
-          </div>
+      {/* =====================================================
+          SEARCH / FILTERS
+      ===================================================== */}
+      <div className="report-filter-card">
 
-          <div className="report-card">
-            <div className="report-card-icon">
-              👨‍🎓
-            </div>
-
-            <div>
-              <span>
-                Students
-              </span>
-
-              <strong>
-                {totalStudents}
-              </strong>
-            </div>
-          </div>
-
-          <div className="report-card">
-            <div className="report-card-icon">
-              📚
-            </div>
-
-            <div>
-              <span>
-                Courses
-              </span>
-
-              <strong>
-                {totalCourses}
-              </strong>
-            </div>
-          </div>
-
-        </div>
-
-        {/* FILTERS */}
-        <div className="report-filters">
+        <div className="report-search-box">
+          <FaSearch />
 
           <input
             type="text"
-            placeholder="Search student, course or lecturer..."
+            placeholder="Search student, index number, course or lecturer..."
             value={search}
             onChange={(e) =>
               setSearch(e.target.value)
             }
           />
+        </div>
 
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) =>
-              setDateFilter(e.target.value)
-            }
-          />
+        <div className="report-filter-select">
 
           <select
             value={courseFilter}
@@ -650,18 +567,19 @@ function Reports() {
               All Courses
             </option>
 
-            {uniqueCourses.map(
-              (course) => (
-                <option
-                  key={course._id}
-                  value={course._id}
-                >
-                  {course.courseCode} -{" "}
-                  {course.courseName}
-                </option>
-              )
-            )}
+            {uniqueCourses.map((course) => (
+              <option
+                key={course._id || course.courseCode}
+                value={course.courseCode}
+              >
+                {course.courseCode} - {course.courseName}
+              </option>
+            ))}
           </select>
+
+        </div>
+
+        <div className="report-filter-select">
 
           <select
             value={statusFilter}
@@ -682,175 +600,227 @@ function Reports() {
             </option>
           </select>
 
+        </div>
+
+        <button
+          type="button"
+          className="clear-filter-button"
+          onClick={clearFilters}
+        >
+          <FaTimes />
+          Clear
+        </button>
+
+      </div>
+
+
+      {/* =====================================================
+          DOWNLOAD BUTTONS
+      ===================================================== */}
+      <div className="report-download-card">
+
+        <div>
+          <h3>Download Report</h3>
+
+          <p>
+            Current period: <strong>{periodLabel}</strong>
+          </p>
+        </div>
+
+        <div className="report-download-buttons">
+
           <button
             type="button"
-            className="clear-filters-btn"
-            onClick={clearFilters}
+            className="download-pdf-button"
+            onClick={exportPDF}
+            disabled={!filteredAttendance.length}
           >
-            Clear
+            <FaFilePdf />
+            Download PDF
+          </button>
+
+          <button
+            type="button"
+            className="download-excel-button"
+            onClick={exportExcel}
+            disabled={!filteredAttendance.length}
+          >
+            <FaFileExcel />
+            Download Excel
           </button>
 
         </div>
 
-        {/* FILTER RESULT COUNT */}
-        <div className="report-result-count">
-          Showing{" "}
-          <strong>
-            {filteredAttendance.length}
-          </strong>{" "}
-          of{" "}
-          <strong>
-            {totalRecords}
-          </strong>{" "}
-          attendance records
+      </div>
+
+
+      {/* =====================================================
+          ERROR
+      ===================================================== */}
+      {error && (
+        <div className="report-error">
+          {error}
+        </div>
+      )}
+
+
+      {/* =====================================================
+          SUMMARY CARDS
+      ===================================================== */}
+      <div className="report-summary-grid">
+
+        <div className="report-summary-card">
+          <span>Total Records</span>
+          <strong>{totalRecords}</strong>
         </div>
 
-        {/* TABLE */}
-        <div className="table-container">
+        <div className="report-summary-card">
+          <span>Present</span>
+          <strong>{presentRecords}</strong>
+        </div>
 
-          <table className="admin-table">
+        <div className="report-summary-card">
+          <span>Absent</span>
+          <strong>{absentRecords}</strong>
+        </div>
 
-            <thead>
-              <tr>
-                <th>
-                  Student
-                </th>
+        <div className="report-summary-card">
+          <span>Students</span>
+          <strong>{uniqueStudents}</strong>
+        </div>
 
-                <th>
-                  Index Number
-                </th>
-
-                <th>
-                  Course
-                </th>
-
-                <th>
-                  Lecturer
-                </th>
-
-                <th>
-                  Date
-                </th>
-
-                <th>
-                  Time
-                </th>
-
-                <th>
-                  Status
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {loading ? (
-
-                <tr>
-                  <td
-                    colSpan="7"
-                    className="no-records"
-                  >
-                    Loading attendance
-                    records...
-                  </td>
-                </tr>
-
-              ) : filteredAttendance.length > 0 ? (
-
-                filteredAttendance.map(
-                  (record) => (
-
-                    <tr
-                      key={record._id}
-                    >
-
-                      <td>
-                        {record.student?.name ||
-                          "N/A"}
-                      </td>
-
-                      <td>
-                        {record.student
-                          ?.indexNumber ||
-                          "N/A"}
-                      </td>
-
-                      <td>
-                        <strong>
-                          {record.course
-                            ?.courseCode ||
-                            "N/A"}
-                        </strong>
-
-                        <br />
-
-                        <small>
-                          {record.course
-                            ?.courseName ||
-                            "N/A"}
-                        </small>
-                      </td>
-
-                      <td>
-                        {record.lecturer
-                          ?.name ||
-                          "N/A"}
-                      </td>
-
-                      <td>
-                        {formatDate(
-                          record.scannedAt
-                        )}
-                      </td>
-
-                      <td>
-                        {formatTime(
-                          record.scannedAt
-                        )}
-                      </td>
-
-                      <td>
-                        <span
-                          className={`status-active ${
-                            (
-                              record.status ||
-                              "Present"
-                            ).toLowerCase()
-                          }`}
-                        >
-                          {record.status ||
-                            "Present"}
-                        </span>
-                      </td>
-
-                    </tr>
-
-                  )
-                )
-
-              ) : (
-
-                <tr>
-                  <td
-                    colSpan="7"
-                    className="no-records"
-                  >
-                    No attendance records
-                    found.
-                  </td>
-                </tr>
-
-              )}
-
-            </tbody>
-
-          </table>
-
+        <div className="report-summary-card">
+          <span>Courses</span>
+          <strong>{uniqueCoursesCount}</strong>
         </div>
 
       </div>
-    </DashboardLayout>
+
+
+      {/* =====================================================
+          TABLE
+      ===================================================== */}
+      <div className="report-table-card">
+
+        <div className="report-table-header">
+
+          <div>
+            <h3>Attendance Records</h3>
+
+            <p>
+              Showing {filteredAttendance.length} record
+              {filteredAttendance.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+
+          <FaDownload />
+
+        </div>
+
+
+        {loading ? (
+          <div className="report-loading">
+            Loading attendance records...
+          </div>
+        ) : filteredAttendance.length === 0 ? (
+          <div className="report-empty">
+            <FaCalendarAlt />
+
+            <h3>No Attendance Records</h3>
+
+            <p>
+              There are no attendance records for the selected
+              period and filters.
+            </p>
+          </div>
+        ) : (
+          <div className="report-table-wrapper">
+
+            <table className="report-table">
+
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Index Number</th>
+                  <th>Course</th>
+                  <th>Lecturer</th>
+                  <th>Class</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {filteredAttendance.map((record) => (
+                  <tr key={record._id}>
+
+                    <td>
+                      {record.student?.name || "—"}
+                    </td>
+
+                    <td>
+                      {record.student?.indexNumber || "—"}
+                    </td>
+
+                    <td>
+                      <div className="course-cell">
+                        <strong>
+                          {record.course?.courseCode || "—"}
+                        </strong>
+
+                        <span>
+                          {record.course?.courseName || "—"}
+                        </span>
+                      </div>
+                    </td>
+
+                    <td>
+                      {record.lecturer?.name || "—"}
+                    </td>
+
+                    <td>
+                      {record.student?.className ||
+                        record.session?.className ||
+                        "—"}
+                    </td>
+
+                    <td>
+                      {formatDate(record.scannedAt)}
+                    </td>
+
+                    <td>
+                      {formatTime(record.scannedAt)}
+                    </td>
+
+                    <td>
+
+                      <span
+                        className={
+                          record.status === "Present"
+                            ? "status-badge present"
+                            : "status-badge absent"
+                        }
+                      >
+                        {record.status || "—"}
+                      </span>
+
+                    </td>
+
+                  </tr>
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+        )}
+
+      </div>
+
+    </div>
   );
 }
 
