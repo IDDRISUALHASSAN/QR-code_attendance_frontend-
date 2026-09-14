@@ -12,10 +12,9 @@
 
 .scan-qr-container {
   width: 100%;
-  max-width: 850px;
+  max-width: 900px;
   margin: 0 auto;
 }
-
 
 /* ============================================================
    HEADER
@@ -32,52 +31,30 @@
   width: 58px;
   height: 58px;
   flex-shrink: 0;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border-radius: 17px;
-
-  background: linear-gradient(
-    135deg,
-    #2563eb,
-    #1d4ed8
-  );
-
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #ffffff;
   font-size: 1.5rem;
-
-  box-shadow:
-    0 12px 28px
-    rgba(37, 99, 235, 0.22);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
 }
 
 .scan-qr-header h1 {
   margin: 0;
-
   color: #0f172a;
-
-  font-size: clamp(
-    1.5rem,
-    3vw,
-    2rem
-  );
-
+  font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 800;
   line-height: 1.2;
 }
 
 .scan-qr-header p {
   margin: 7px 0 0;
-
   color: #64748b;
-
   font-size: 0.95rem;
-
   line-height: 1.5;
 }
-
 
 /* ============================================================
    MAIN CARD
@@ -86,20 +63,253 @@
 .scan-qr-card {
   width: 100%;
   box-sizing: border-box;
-
-  background: #ffffff;
-
-  border: 1px solid #e2e8f0;
-
-  border-radius: 22px;
-
   padding: 28px;
-
-  box-shadow:
-    0 18px 45px
-    rgba(15, 23, 42, 0.07);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.07);
 }
 
+/* ============================================================
+   LOCATION CARD
+   ============================================================ */
+
+.student-location-card {
+  margin-bottom: 28px;
+  padding: 20px;
+  border: 1px solid #dbeafe;
+  border-radius: 17px;
+  background: #f8fbff;
+}
+
+.student-location-header {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.student-location-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #dbeafe;
+  color: #2563eb;
+  font-size: 1.1rem;
+}
+
+.student-location-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.student-location-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.refresh-location-button {
+  width: 38px;
+  height: 38px;
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: #2563eb;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.refresh-location-button:hover {
+  background: #eff6ff;
+  transform: translateY(-1px);
+}
+
+.refresh-location-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================================
+   LOCATION LOADING
+   ============================================================ */
+
+.location-loading {
+  margin-top: 17px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 11px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.location-loading svg {
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   LOCATION DETECTED
+   ============================================================ */
+
+.location-detected {
+  margin-top: 17px;
+  padding: 16px;
+  border-radius: 13px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.location-status-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #15803d;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.location-status-title svg {
+  flex-shrink: 0;
+}
+
+.location-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.location-detail {
+  padding: 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #dcfce7;
+}
+
+.location-detail span {
+  display: block;
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.location-detail strong {
+  display: block;
+  color: #166534;
+  font-size: 0.9rem;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+/* ============================================================
+   LOCATION ERROR
+   ============================================================ */
+
+.location-error {
+  margin-top: 17px;
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  border-radius: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.location-error > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.location-error strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+
+.location-error p {
+  margin: 0;
+  color: #7f1d1d;
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+.location-error button {
+  margin-top: 10px;
+  padding: 7px 12px;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #991b1b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.location-error button:hover {
+  background: #fff7f7;
+}
+
+/* ============================================================
+   SPINNER
+   ============================================================ */
+
+.spinning {
+  animation: scanQrSpin 1s linear infinite;
+}
+
+@keyframes scanQrSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================
+   SCANNER SECTION
+   ============================================================ */
+
+.scanner-section {
+  width: 100%;
+}
+
+.scanner-section-title {
+  margin-bottom: 16px;
+}
+
+.scanner-section-title h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.scanner-section-title p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 0.86rem;
+}
 
 /* ============================================================
    SCANNER
@@ -107,36 +317,27 @@
 
 .scanner-wrapper {
   width: 100%;
-
   display: flex;
   justify-content: center;
 }
 
 .qr-reader {
   width: min(100%, 430px);
-  height: 330px;
-
+  min-height: 330px;
   margin: 0 auto;
-
   overflow: hidden;
-
   border: 3px solid #dbeafe;
-
   border-radius: 18px;
-
   background: #0f172a;
-
   box-shadow:
-    inset 0 0 0 1px
-    rgba(148, 163, 184, 0.25);
+    inset 0 0 0 1px rgba(148, 163, 184, 0.25);
 }
 
 .qr-reader video {
   width: 100% !important;
   height: 100% !important;
-
+  min-height: 324px;
   object-fit: cover;
-
   border-radius: 14px;
 }
 
@@ -144,6 +345,23 @@
   max-width: 100%;
 }
 
+/* html5-qrcode internal controls */
+
+#qr-reader__dashboard {
+  padding: 8px !important;
+}
+
+#qr-reader__dashboard_section {
+  padding: 0 !important;
+}
+
+#qr-reader__dashboard_section_csr {
+  padding: 0 !important;
+}
+
+#qr-reader__status_span {
+  font-size: 0.8rem;
+}
 
 /* ============================================================
    SCANNER CONTROLS
@@ -152,31 +370,21 @@
 .scanner-controls {
   display: flex;
   justify-content: center;
-
   margin-top: 24px;
 }
 
 .scan-button,
 .stop-scan-button {
-  min-width: 190px;
-
-  border: none;
-
+  min-width: 210px;
   border-radius: 12px;
-
   padding: 13px 22px;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   gap: 10px;
-
   font-size: 0.96rem;
   font-weight: 700;
-
   cursor: pointer;
-
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
@@ -184,52 +392,35 @@
 }
 
 .scan-button {
+  border: none;
   color: #ffffff;
-
-  background: linear-gradient(
-    135deg,
-    #2563eb,
-    #1d4ed8
-  );
-
-  box-shadow:
-    0 12px 25px
-    rgba(37, 99, 235, 0.22);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 12px 25px rgba(37, 99, 235, 0.22);
 }
 
-.scan-button:hover {
+.scan-button:hover:not(:disabled) {
   transform: translateY(-2px);
-
-  box-shadow:
-    0 16px 30px
-    rgba(37, 99, 235, 0.28);
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.28);
 }
 
 .stop-scan-button {
   color: #334155;
-
   background: #ffffff;
-
   border: 1px solid #cbd5e1;
 }
 
-.stop-scan-button:hover {
+.stop-scan-button:hover:not(:disabled) {
   transform: translateY(-2px);
-
   background: #f8fafc;
 }
 
 .scan-button:disabled,
 .stop-scan-button:disabled {
   opacity: 0.6;
-
   cursor: not-allowed;
-
   transform: none;
-
   box-shadow: none;
 }
-
 
 /* ============================================================
    STATUS
@@ -237,40 +428,24 @@
 
 .scan-status {
   margin-top: 18px;
-
   padding: 13px 16px;
-
   border-radius: 12px;
-
   display: flex;
   align-items: center;
-
   gap: 10px;
-
   font-size: 0.92rem;
   font-weight: 600;
 }
 
 .loading-status {
   color: #1d4ed8;
-
   background: #eff6ff;
-
   border: 1px solid #bfdbfe;
-}
-
-.location-status {
-  color: #0369a1;
-
-  background: #f0f9ff;
-
-  border: 1px solid #bae6fd;
 }
 
 .scan-status svg {
   flex-shrink: 0;
 }
-
 
 /* ============================================================
    MESSAGE
@@ -278,45 +453,32 @@
 
 .scan-message {
   margin-top: 20px;
-
   padding: 14px 16px;
-
   border-radius: 12px;
-
   display: flex;
   align-items: flex-start;
-
   gap: 10px;
-
   font-size: 0.94rem;
-
   font-weight: 600;
-
   line-height: 1.5;
 }
 
 .scan-message.success {
   color: #166534;
-
   background: #dcfce7;
-
   border: 1px solid #bbf7d0;
 }
 
 .scan-message.error {
   color: #991b1b;
-
   background: #fef2f2;
-
   border: 1px solid #fecaca;
 }
 
 .scan-message svg {
   flex-shrink: 0;
-
   margin-top: 2px;
 }
-
 
 /* ============================================================
    SUCCESS BOX
@@ -324,53 +486,34 @@
 
 .attendance-success {
   margin-top: 18px;
-
   padding: 17px;
-
   display: flex;
   align-items: flex-start;
-
   gap: 12px;
-
   border-radius: 15px;
-
-  background: linear-gradient(
-    135deg,
-    #f0fdf4,
-    #ecfdf5
-  );
-
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
   border: 1px solid #bbf7d0;
-
   color: #166534;
 }
 
 .attendance-success > svg {
   flex-shrink: 0;
-
   margin-top: 2px;
-
   font-size: 1.2rem;
 }
 
 .attendance-success strong {
   display: block;
-
   margin-bottom: 4px;
-
   font-size: 0.98rem;
 }
 
 .attendance-success p {
   margin: 0;
-
   color: #166534;
-
   font-size: 0.88rem;
-
   line-height: 1.5;
 }
-
 
 /* ============================================================
    INSTRUCTIONS
@@ -378,63 +521,44 @@
 
 .scan-instructions {
   margin-top: 28px;
-
   padding-top: 24px;
-
   border-top: 1px solid #e2e8f0;
 }
 
 .scan-instructions h3 {
   margin: 0 0 14px;
-
   color: #0f172a;
-
   font-size: 1.05rem;
-
-  font-weight: 750;
+  font-weight: 800;
 }
 
 .instruction-item {
   display: flex;
-
   align-items: flex-start;
-
   gap: 12px;
-
   padding: 9px 0;
 }
 
 .instruction-item span {
   width: 27px;
   height: 27px;
-
   flex-shrink: 0;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border-radius: 50%;
-
   background: #dbeafe;
-
   color: #1d4ed8;
-
   font-size: 0.78rem;
-
   font-weight: 800;
 }
 
 .instruction-item p {
   margin: 2px 0 0;
-
   color: #475569;
-
   font-size: 0.9rem;
-
   line-height: 1.5;
 }
-
 
 /* ============================================================
    MOBILE
@@ -452,9 +576,7 @@
   .scan-qr-icon {
     width: 50px;
     height: 50px;
-
     border-radius: 14px;
-
     font-size: 1.3rem;
   }
 
@@ -468,26 +590,38 @@
 
   .scan-qr-card {
     padding: 18px;
-
     border-radius: 18px;
   }
 
-  .qr-reader {
-    height: 270px;
+  .student-location-card {
+    padding: 15px;
+  }
 
-    border-radius: 15px;
+  .student-location-header {
+    align-items: flex-start;
+  }
+
+  .location-details {
+    grid-template-columns: 1fr;
+  }
+
+  .qr-reader {
+    min-height: 270px;
+  }
+
+  .qr-reader video {
+    min-height: 264px;
+  }
+
+  .scanner-controls {
+    width: 100%;
   }
 
   .scan-button,
   .stop-scan-button {
     width: 100%;
   }
-
-  .scanner-controls {
-    width: 100%;
-  }
 }
-
 
 /* ============================================================
    VERY SMALL SCREENS
@@ -506,7 +640,20 @@
     padding: 14px;
   }
 
+  .student-location-card {
+    padding: 13px;
+  }
+
+  .student-location-icon {
+    width: 40px;
+    height: 40px;
+  }
+
   .qr-reader {
-    height: 245px;
+    min-height: 245px;
+  }
+
+  .qr-reader video {
+    min-height: 239px;
   }
 }
