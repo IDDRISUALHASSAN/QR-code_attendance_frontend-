@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import "../../styles/scanQR.css";
 import {
   FaQrcode,
   FaLocationArrow,
