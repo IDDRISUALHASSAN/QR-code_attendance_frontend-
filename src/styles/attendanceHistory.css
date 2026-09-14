@@ -1,337 +1,483 @@
 /* =========================================================
-   ATTENDANCE HISTORY PAGE
+   LECTURER ATTENDANCE HISTORY
+   Professional responsive styling
    ========================================================= */
 
 .attendance-history-page {
   width: 100%;
   max-width: 1500px;
   margin: 0 auto;
-  padding-bottom: 40px;
+  padding: 28px;
+  box-sizing: border-box;
 }
 
 /* =========================================================
-   SUMMARY CARDS
+   PAGE HEADER
    ========================================================= */
 
-.attendance-history-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-  margin: 24px 0;
-}
-
-.attendance-summary-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-height: 105px;
-  padding: 20px;
-  background: #ffffff;
-  border: 1px solid #e8edf3;
-  border-radius: 16px;
-  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.05);
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
-}
-
-.attendance-summary-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
-  border-color: #dbe3ec;
-}
-
-.attendance-summary-card > div:last-child {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.attendance-summary-card span {
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.attendance-summary-card strong {
-  color: #172033;
-  font-size: 27px;
-  line-height: 1;
-  font-weight: 750;
-}
-
-.attendance-summary-icon {
-  width: 52px;
-  height: 52px;
-  min-width: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px;
-  font-size: 21px;
-}
-
-.attendance-summary-icon.blue {
-  background: #eaf2ff;
-  color: #2563eb;
-}
-
-.attendance-summary-icon.green {
-  background: #eafaf1;
-  color: #16a34a;
-}
-
-.attendance-summary-icon.orange {
-  background: #fff5e8;
-  color: #ea8a00;
-}
-
-.attendance-summary-icon.purple {
-  background: #f2edff;
-  color: #7c3aed;
-}
-
-/* =========================================================
-   MAIN SECTION
-   ========================================================= */
-
-.attendance-history-section {
-  background: #ffffff;
-  border: 1px solid #e8edf3;
-  border-radius: 18px;
-  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.045);
-  overflow: hidden;
-}
-
-.attendance-history-section-header {
+.attendance-history-page .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 25px 26px 22px;
-  border-bottom: 1px solid #edf1f5;
+  margin-bottom: 24px;
 }
 
-.attendance-history-section-header > div:first-child {
-  min-width: 0;
-}
-
-.attendance-section-label {
-  display: block;
-  margin-bottom: 7px;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: 0.09em;
-}
-
-.attendance-history-section-header h2 {
+.attendance-history-page .page-header h1 {
   margin: 0;
-  color: #172033;
-  font-size: 21px;
-  font-weight: 750;
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
-.attendance-history-section-header p {
-  margin: 6px 0 0;
-  color: #718096;
-  font-size: 13px;
-  line-height: 1.5;
+.attendance-history-page .page-header p {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 /* =========================================================
-   REFRESH BUTTON
+   PERIOD CARD
    ========================================================= */
 
-.attendance-refresh-btn {
+.report-period-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+.report-period-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.report-period-title > svg {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 3px;
+}
+
+.report-period-title h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.report-period-title p {
+  margin: 5px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* =========================================================
+   PERIOD BUTTONS
+   ========================================================= */
+
+.period-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.period-button {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  border-radius: 10px;
+  padding: 10px 17px;
+  min-height: 42px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.period-button:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.period-button.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.2);
+}
+
+/* =========================================================
+   CUSTOM PERIOD
+   ========================================================= */
+
+.custom-period-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eef0f3;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.filter-group label {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.filter-group input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.filter-group input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* =========================================================
+   FILTER CARD
+   ========================================================= */
+
+.report-filter-card {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 180px 180px auto;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
+.report-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #ffffff;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.report-search-box > svg {
+  flex-shrink: 0;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.report-search-box:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.report-search-box input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #111827;
+  font-size: 14px;
+}
+
+.report-search-box input::placeholder {
+  color: #9ca3af;
+}
+
+/* =========================================================
+   SELECTS
+   ========================================================= */
+
+.report-filter-select select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.report-filter-select select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* =========================================================
+   CLEAR BUTTON
+   ========================================================= */
+
+.clear-filter-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.clear-filter-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #111827;
+}
+
+/* =========================================================
+   DOWNLOAD CARD
+   ========================================================= */
+
+.report-download-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+.report-download-card h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.report-download-card p {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.report-download-card strong {
+  color: #2563eb;
+}
+
+.report-download-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.download-pdf-button,
+.download-excel-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-height: 42px;
   padding: 0 16px;
-  border: 1px solid #dce3eb;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #334155;
+  border: 0;
+  border-radius: 9px;
+  color: #ffffff;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
   transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.attendance-refresh-btn:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #2563eb;
-  transform: translateY(-1px);
-}
-
-.attendance-refresh-btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.spinning {
-  animation: attendance-spin 1s linear infinite;
-}
-
-@keyframes attendance-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* =========================================================
-   FILTERS
-   ========================================================= */
-
-.attendance-history-filters {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.7fr) minmax(150px, 1fr) minmax(145px, 0.9fr) minmax(150px, 1fr) auto;
-  gap: 11px;
-  padding: 18px 22px;
-  background: #f8fafc;
-  border-bottom: 1px solid #edf1f5;
-}
-
-.attendance-filter-search,
-.attendance-filter-control,
-.attendance-filter-date {
-  height: 43px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 0 12px;
-  background: #ffffff;
-  border: 1px solid #dfe6ee;
-  border-radius: 10px;
-  transition:
-    border-color 0.2s ease,
+    transform 0.2s ease,
+    opacity 0.2s ease,
     box-shadow 0.2s ease;
 }
 
-.attendance-filter-search:focus-within,
-.attendance-filter-control:focus-within,
-.attendance-filter-date:focus-within {
-  border-color: #93b4e8;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+.download-pdf-button {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.16);
 }
 
-.attendance-filter-search svg,
-.attendance-filter-control svg,
-.attendance-filter-date svg {
-  flex-shrink: 0;
-  color: #94a3b8;
-  font-size: 14px;
+.download-excel-button {
+  background: #15803d;
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.16);
 }
 
-.attendance-filter-search input,
-.attendance-filter-control select,
-.attendance-filter-date input {
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: #334155;
-  font-size: 13px;
-  font-family: inherit;
+.download-pdf-button:hover,
+.download-excel-button:hover {
+  transform: translateY(-1px);
 }
 
-.attendance-filter-search input::placeholder {
-  color: #94a3b8;
-}
-
-.attendance-filter-control select {
-  cursor: pointer;
-  appearance: auto;
-}
-
-.attendance-filter-date input {
-  cursor: pointer;
-}
-
-.attendance-clear-filter-btn {
-  height: 43px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 0 14px;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  background: #fffafa;
-  color: #dc2626;
-  font-size: 13px;
-  font-weight: 650;
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.attendance-clear-filter-btn:hover {
-  background: #fef2f2;
-  border-color: #fca5a5;
+.download-pdf-button:disabled,
+.download-excel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* =========================================================
-   FILTER RESULT BAR
+   ERROR
    ========================================================= */
 
-.attendance-filter-result {
+.report-error {
+  margin-bottom: 20px;
+  padding: 13px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* =========================================================
+   SUMMARY
+   ========================================================= */
+
+.report-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.report-summary-card {
+  min-height: 105px;
+  padding: 18px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.report-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 20px rgba(15, 23, 42, 0.07);
+}
+
+.report-summary-card span {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.report-summary-card strong {
+  color: #111827;
+  font-size: 27px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+/* =========================================================
+   SESSION CARD
+   ========================================================= */
+
+.attendance-history-card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+.attendance-history-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  padding: 12px 22px;
-  background: #ffffff;
-  border-bottom: 1px solid #edf1f5;
-  color: #64748b;
-  font-size: 12px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #eef0f3;
 }
 
-.attendance-filter-result strong {
-  color: #1e293b;
-  font-weight: 750;
+.attendance-history-header h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 700;
 }
 
-.attendance-filter-result > div:last-child {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.attendance-filter-result svg {
-  color: #64748b;
+.attendance-history-header p {
+  margin: 5px 0 0;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 /* =========================================================
    TABLE
    ========================================================= */
 
-.attendance-table-wrapper {
+.attendance-history-table-wrapper {
   width: 100%;
   overflow-x: auto;
-  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .attendance-history-table {
   width: 100%;
-  min-width: 1050px;
+  min-width: 900px;
   border-collapse: collapse;
+  text-align: left;
 }
 
 .attendance-history-table thead {
@@ -340,33 +486,33 @@
 
 .attendance-history-table th {
   padding: 14px 18px;
-  color: #64748b;
-  font-size: 10.5px;
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
   white-space: nowrap;
-  border-bottom: 1px solid #e9eef4;
 }
 
 .attendance-history-table td {
   padding: 16px 18px;
-  color: #475569;
+  border-bottom: 1px solid #eef0f3;
+  color: #374151;
   font-size: 13px;
   vertical-align: middle;
-  border-bottom: 1px solid #edf1f5;
 }
 
 .attendance-history-table tbody tr {
-  transition: background 0.2s ease;
+  transition: background-color 0.15s ease;
 }
 
 .attendance-history-table tbody tr:hover {
-  background: #fafcff;
+  background: #f8fafc;
 }
 
 .attendance-history-table tbody tr:last-child td {
-  border-bottom: none;
+  border-bottom: 0;
 }
 
 /* =========================================================
@@ -376,20 +522,23 @@
 .attendance-course-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-width: 210px;
+  gap: 11px;
+  min-width: 190px;
 }
 
 .attendance-course-icon {
-  width: 39px;
-  height: 39px;
-  min-width: 39px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
   border-radius: 10px;
-  background: #eef4ff;
+  background: #eff6ff;
   color: #2563eb;
+}
+
+.attendance-course-icon svg {
   font-size: 15px;
 }
 
@@ -397,66 +546,60 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-width: 0;
 }
 
 .attendance-course-cell strong {
-  max-width: 250px;
-  overflow: hidden;
-  color: #1e293b;
+  color: #111827;
   font-size: 13px;
   font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .attendance-course-cell small {
-  color: #94a3b8;
+  color: #9ca3af;
   font-size: 11px;
 }
+
+/* =========================================================
+   COURSE CODE
+   ========================================================= */
 
 .course-code {
   display: inline-flex;
   align-items: center;
-  padding: 5px 8px;
+  padding: 5px 9px;
   border-radius: 7px;
-  background: #f1f5f9;
-  color: #475569;
-  font-size: 11px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
 /* =========================================================
-   CLASS BADGES
+   CLASS BADGE
    ========================================================= */
 
 .attendance-class-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 72px;
   padding: 6px 10px;
-  border-radius: 8px;
-  background: #f0ebff;
-  color: #6d3fc1;
-  font-size: 11px;
-  font-weight: 750;
+  border-radius: 7px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .attendance-class-unassigned {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   padding: 6px 10px;
-  border-radius: 8px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 650;
-  white-space: nowrap;
+  border-radius: 7px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* =========================================================
@@ -468,7 +611,7 @@
   align-items: center;
   gap: 7px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
   text-transform: capitalize;
@@ -476,30 +619,20 @@
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: currentColor;
 }
 
 .status-active {
-  background: #ecfdf3;
-  color: #15803d;
+  background: #ecfdf5;
+  color: #047857;
 }
 
 .status-completed {
-  background: #eff6ff;
-  color: #2563eb;
-}
-
-.status-expired {
-  background: #fff7ed;
-  color: #c2410c;
-}
-
-.status-default {
-  background: #f1f5f9;
-  color: #64748b;
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 /* =========================================================
@@ -508,25 +641,19 @@
 
 .student-count {
   display: flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-}
-
-.student-count svg {
-  color: #64748b;
-  font-size: 13px;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .student-count strong {
-  color: #1e293b;
-  font-size: 14px;
-  font-weight: 750;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .student-count span {
-  color: #94a3b8;
-  font-size: 11px;
+  color: #9ca3af;
+  font-size: 10px;
 }
 
 /* =========================================================
@@ -537,29 +664,28 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  min-width: 130px;
+  white-space: nowrap;
 }
 
 .attendance-date > svg {
-  color: #64748b;
-  font-size: 14px;
+  color: #9ca3af;
+  font-size: 13px;
 }
 
 .attendance-date > div {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .attendance-date strong {
-  color: #334155;
+  color: #374151;
   font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
+  font-weight: 600;
 }
 
 .attendance-date small {
-  color: #94a3b8;
+  color: #9ca3af;
   font-size: 11px;
 }
 
@@ -567,214 +693,248 @@
    VIEW BUTTON
    ========================================================= */
 
-.attendance-view-btn {
+.view-attendance-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  min-height: 35px;
-  padding: 0 12px;
-  border: 1px solid #dbe5f1;
+  min-height: 34px;
+  padding: 0 13px;
   border-radius: 8px;
-  background: #f8fbff;
+  background: #eff6ff;
   color: #2563eb;
+  text-decoration: none;
   font-size: 12px;
   font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
   transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
     transform 0.2s ease;
 }
 
-.attendance-view-btn svg {
-  font-size: 10px;
-  transition: transform 0.2s ease;
-}
-
-.attendance-view-btn:hover {
-  background: #eef5ff;
-  border-color: #c7d9f5;
+.view-attendance-button:hover {
+  background: #2563eb;
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
-.attendance-view-btn:hover svg {
-  transform: translateX(2px);
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.report-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: 30px;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 /* =========================================================
-   EMPTY / LOADING
+   EMPTY STATE
    ========================================================= */
 
-.attendance-history-empty {
-  min-height: 330px;
+.report-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 45px 25px;
+  min-height: 270px;
+  padding: 35px 20px;
   text-align: center;
 }
 
-.attendance-loading-icon {
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  border-radius: 18px;
-  background: #eef4ff;
-  color: #2563eb;
-  font-size: 25px;
+.report-empty > svg {
+  margin-bottom: 14px;
+  color: #9ca3af;
+  font-size: 30px;
 }
 
-.attendance-history-empty h3 {
+.report-empty h3 {
   margin: 0;
-  color: #1e293b;
+  color: #374151;
   font-size: 17px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
-.attendance-history-empty p {
+.report-empty p {
   max-width: 480px;
-  margin: 8px 0 20px;
-  color: #7b8798;
+  margin: 7px 0 0;
+  color: #9ca3af;
   font-size: 13px;
   line-height: 1.6;
 }
 
-.attendance-history-empty.error-state
-  .attendance-loading-icon {
-  background: #fff1f2;
-  color: #dc2626;
-}
+/* =========================================================
+   RESPONSIVE - TABLET
+   ========================================================= */
 
-.attendance-retry-btn,
-.attendance-start-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 15px;
-  border-radius: 9px;
-  font-size: 12px;
-  font-weight: 700;
-  text-decoration: none;
-  cursor: pointer;
-}
+@media (max-width: 1100px) {
+  .attendance-history-page {
+    padding: 22px;
+  }
 
-.attendance-retry-btn {
-  border: 1px solid #dbe3ec;
-  background: #ffffff;
-  color: #334155;
-}
+  .report-filter-card {
+    grid-template-columns: 1fr 1fr;
+  }
 
-.attendance-retry-btn:hover {
-  background: #f8fafc;
-}
+  .report-search-box {
+    grid-column: 1 / -1;
+  }
 
-.attendance-start-btn {
-  border: 1px solid #2563eb;
-  background: #2563eb;
-  color: #ffffff;
-  transition:
-    background 0.2s ease,
-    transform 0.2s ease;
-}
+  .clear-filter-button {
+    width: 100%;
+  }
 
-.attendance-start-btn:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
+  .report-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .report-download-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .report-download-buttons {
+    width: 100%;
+  }
+
+  .download-pdf-button,
+  .download-excel-button {
+    flex: 1;
+  }
 }
 
 /* =========================================================
-   RESPONSIVE
+   RESPONSIVE - MOBILE
    ========================================================= */
 
-@media (max-width: 1200px) {
-  .attendance-history-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .attendance-history-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .attendance-clear-filter-btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 800px) {
+@media (max-width: 700px) {
   .attendance-history-page {
-    padding-bottom: 25px;
-  }
-
-  .attendance-history-section-header {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 20px;
-  }
-
-  .attendance-refresh-btn {
-    width: 100%;
-  }
-
-  .attendance-history-filters {
-    grid-template-columns: 1fr;
-    padding: 15px;
-  }
-
-  .attendance-filter-result {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 12px 15px;
-  }
-
-  .attendance-table-wrapper {
-    overflow-x: auto;
-  }
-
-  .attendance-history-table {
-    min-width: 1050px;
-  }
-}
-
-@media (max-width: 600px) {
-  .attendance-history-summary {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    margin: 18px 0;
-  }
-
-  .attendance-summary-card {
-    min-height: 90px;
     padding: 16px;
   }
 
-  .attendance-summary-icon {
-    width: 46px;
-    height: 46px;
-    min-width: 46px;
+  .attendance-history-page .page-header {
+    margin-bottom: 18px;
   }
 
-  .attendance-summary-card strong {
+  .attendance-history-page .page-header h1 {
     font-size: 24px;
   }
 
-  .attendance-history-section-header h2 {
-    font-size: 19px;
+  .attendance-history-page .page-header p {
+    font-size: 13px;
   }
 
-  .attendance-history-section-header p {
+  .report-period-card {
+    padding: 18px;
+    border-radius: 13px;
+  }
+
+  .report-period-title {
+    gap: 10px;
+  }
+
+  .report-period-title h3 {
+    font-size: 16px;
+  }
+
+  .period-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .period-button {
+    width: 100%;
+    padding: 9px 10px;
     font-size: 12px;
   }
 
-  .attendance-history-empty {
-    min-height: 280px;
-    padding: 35px 18px;
+  .custom-period-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .report-filter-card {
+    grid-template-columns: 1fr;
+    padding: 14px;
+    border-radius: 13px;
+  }
+
+  .report-search-box {
+    grid-column: auto;
+  }
+
+  .report-download-card {
+    padding: 18px;
+    border-radius: 13px;
+  }
+
+  .report-download-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .download-pdf-button,
+  .download-excel-button {
+    width: 100%;
+    flex: none;
+  }
+
+  .report-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .report-summary-card {
+    min-height: 90px;
+    padding: 14px;
+  }
+
+  .report-summary-card strong {
+    font-size: 23px;
+  }
+
+  .attendance-history-card {
+    border-radius: 13px;
+  }
+
+  .attendance-history-header {
+    padding: 18px;
+  }
+
+  .attendance-history-header h3 {
+    font-size: 16px;
+  }
+
+  .attendance-history-table th,
+  .attendance-history-table td {
+    padding: 13px 14px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE - SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 430px) {
+  .attendance-history-page {
+    padding: 12px;
+  }
+
+  .period-options {
+    grid-template-columns: 1fr;
+  }
+
+  .report-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .report-summary-card span {
+    font-size: 11px;
+  }
+
+  .report-summary-card strong {
+    font-size: 21px;
   }
 }

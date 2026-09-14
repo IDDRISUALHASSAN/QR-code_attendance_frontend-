@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import {
   FaCalendarAlt,
   FaFileExcel,
@@ -7,7 +13,9 @@ import {
   FaTimes,
   FaDownload,
 } from "react-icons/fa";
+
 import { Link } from "react-router-dom";
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -18,6 +26,10 @@ import "../../styles/Dashboard.css";
 import "../../styles/attendanceHistory.css";
 
 function AttendanceHistory() {
+  // ==========================================================
+  // STATE
+  // ==========================================================
+
   const [sessions, setSessions] = useState([]);
   const [attendance, setAttendance] = useState([]);
 
@@ -34,11 +46,43 @@ function AttendanceHistory() {
 
   const [error, setError] = useState("");
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  // Used to prevent an older request from overwriting
+  // the result of a newer period request.
+  const requestIdRef = useRef(0);
+
+  // Abort previous requests when the period changes.
+  const abortControllerRef = useRef(null);
+
+  // ==========================================================
+  // USER
+  // ==========================================================
+
+  const user = useMemo(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("user") || "null"
+      );
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // ==========================================================
+  // CLASS OPTIONS
+  // ==========================================================
+
+  const classOptions = [
+    "Class A",
+    "Class B",
+    "Class C",
+    "Class D",
+    "Class E",
+  ];
 
   // ==========================================================
   // PERIOD LABEL
   // ==========================================================
+
   const periodLabel = useMemo(() => {
     if (period === "thisWeek") {
       return "This Week";
@@ -64,303 +108,748 @@ function AttendanceHistory() {
   }, [period, fromDate, toDate]);
 
   // ==========================================================
-  // FETCH LECTURER SESSIONS
+  // BUILD PERIOD QUERY
   // ==========================================================
-  const fetchSessions = async () => {
-    try {
-      setLoading(true);
-      setError("");
 
-      const token = localStorage.getItem("token");
+  const buildPeriodQuery = () => {
+    const params = new URLSearchParams();
 
-      const response = await fetch(
-        `${API_URL}/api/attendance/lecturer/${user?.id}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+    params.set("period", period);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Failed to fetch attendance sessions."
-        );
+    if (period === "custom") {
+      if (fromDate) {
+        params.set("from", fromDate);
       }
 
-      setSessions(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Fetch lecturer sessions error:", err);
-
-      setError(
-        err.message ||
-          "Failed to load attendance sessions."
-      );
-
-      setSessions([]);
-    } finally {
-      setLoading(false);
+      if (toDate) {
+        params.set("to", toDate);
+      }
     }
+
+    return params.toString();
   };
 
   // ==========================================================
-  // FETCH LECTURER REPORT
+  // FETCH SESSIONS + ATTENDANCE FOR CURRENT PERIOD
   // ==========================================================
-  const fetchAttendanceReport = async () => {
-    try {
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPeriodData = async () => {
+      // --------------------------------------------------------
+      // CUSTOM PERIOD
+      // Do not request anything until both dates are selected.
+      // --------------------------------------------------------
+
       if (
         period === "custom" &&
         (!fromDate || !toDate)
       ) {
+        setSessions([]);
         setAttendance([]);
+        setLoading(false);
+        setReportLoading(false);
+        setError("");
         return;
       }
 
-      setReportLoading(true);
+      // --------------------------------------------------------
+      // Validate custom date order before sending request.
+      // --------------------------------------------------------
 
-      const token = localStorage.getItem("token");
-
-      const params = new URLSearchParams();
-
-      if (period && period !== "all") {
-        params.append("period", period);
-      }
-
-      if (period === "custom") {
-        params.append("from", fromDate);
-        params.append("to", toDate);
-      }
-
-      let url =
-        `${API_URL}/api/attendance/lecturer/${user?.id}/report`;
-
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Failed to fetch attendance report."
+      if (
+        period === "custom" &&
+        fromDate &&
+        toDate &&
+        fromDate > toDate
+      ) {
+        setSessions([]);
+        setAttendance([]);
+        setLoading(false);
+        setReportLoading(false);
+        setError(
+          "The From date cannot be after the To date."
         );
+        return;
       }
 
-      setAttendance(
-        Array.isArray(data)
-          ? data
-          : data.attendance || []
-      );
-    } catch (err) {
-      console.error(
-        "Fetch lecturer attendance report error:",
-        err
-      );
+      // --------------------------------------------------------
+      // Cancel previous request.
+      // --------------------------------------------------------
 
-      setError(
-        err.message ||
-          "Failed to load attendance report."
-      );
-
-      setAttendance([]);
-    } finally {
-      setReportLoading(false);
-    }
-  };
-
-  // ==========================================================
-  // INITIAL LOAD
-  // ==========================================================
-  useEffect(() => {
-    fetchSessions();
-  }, []);
-
-  // ==========================================================
-  // FETCH REPORT WHEN PERIOD CHANGES
-  // ==========================================================
-  useEffect(() => {
-    if (period === "custom") {
-      if (fromDate && toDate) {
-        fetchAttendanceReport();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
-    } else {
-      fetchAttendanceReport();
-    }
-  }, [period, fromDate, toDate]);
+
+      const controller = new AbortController();
+
+      abortControllerRef.current = controller;
+
+      const currentRequestId =
+        ++requestIdRef.current;
+
+      try {
+        setLoading(true);
+        setReportLoading(true);
+        setError("");
+
+        // ------------------------------------------------------
+        // Clear old data immediately.
+        //
+        // This is important.
+        // We don't keep showing Last Week while This Week is
+        // loading.
+        // ------------------------------------------------------
+
+        setSessions([]);
+        setAttendance([]);
+
+        const token =
+          localStorage.getItem("token");
+
+        if (!user?.id) {
+          throw new Error(
+            "Lecturer account information was not found."
+          );
+        }
+
+        const query =
+          buildPeriodQuery();
+
+        // ------------------------------------------------------
+        // ENDPOINTS
+        // ------------------------------------------------------
+
+        const sessionsUrl =
+          `${API_URL}/api/attendance/lecturer/${user.id}?${query}`;
+
+        const reportUrl =
+          `${API_URL}/api/attendance/lecturer/${user.id}/report?${query}`;
+
+        // ------------------------------------------------------
+        // Fetch BOTH endpoints using the SAME period.
+        // ------------------------------------------------------
+
+        const [sessionsResponse, reportResponse] =
+          await Promise.all([
+            fetch(sessionsUrl, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              signal: controller.signal,
+            }),
+
+            fetch(reportUrl, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              signal: controller.signal,
+            }),
+          ]);
+
+        const sessionsData =
+          await sessionsResponse.json();
+
+        const reportData =
+          await reportResponse.json();
+
+        // ------------------------------------------------------
+        // If another request has started, ignore this response.
+        // ------------------------------------------------------
+
+        if (
+          cancelled ||
+          controller.signal.aborted ||
+          currentRequestId !==
+            requestIdRef.current
+        ) {
+          return;
+        }
+
+        // ------------------------------------------------------
+        // Check sessions response
+        // ------------------------------------------------------
+
+        if (!sessionsResponse.ok) {
+          throw new Error(
+            sessionsData.message ||
+              "Failed to fetch attendance sessions."
+          );
+        }
+
+        // ------------------------------------------------------
+        // Check report response
+        // ------------------------------------------------------
+
+        if (!reportResponse.ok) {
+          throw new Error(
+            reportData.message ||
+              "Failed to fetch attendance report."
+          );
+        }
+
+        // ------------------------------------------------------
+        // Extract sessions.
+        //
+        // Backend returns:
+        // {
+        //   sessions: [...]
+        // }
+        // ------------------------------------------------------
+
+        const fetchedSessions =
+          Array.isArray(sessionsData)
+            ? sessionsData
+            : Array.isArray(
+                sessionsData.sessions
+              )
+            ? sessionsData.sessions
+            : [];
+
+        // ------------------------------------------------------
+        // Extract attendance.
+        //
+        // Backend returns:
+        // {
+        //   attendance: [...]
+        // }
+        // ------------------------------------------------------
+
+        const fetchedAttendance =
+          Array.isArray(reportData)
+            ? reportData
+            : Array.isArray(
+                reportData.attendance
+              )
+            ? reportData.attendance
+            : [];
+
+        // ------------------------------------------------------
+        // FINAL SAFETY FILTER
+        //
+        // The backend already filters by period.
+        // We additionally verify the returned records on the
+        // frontend so stale/mismatched records cannot appear.
+        // ------------------------------------------------------
+
+        const periodRange =
+          getFrontendPeriodRange(
+            period,
+            fromDate,
+            toDate
+          );
+
+        const finalSessions =
+          fetchedSessions.filter(
+            (session) =>
+              isDateInsideRange(
+                session.startTime ||
+                  session.date ||
+                  session.createdAt,
+                periodRange
+              )
+          );
+
+        const finalAttendance =
+          fetchedAttendance.filter(
+            (record) =>
+              isDateInsideRange(
+                record.scannedAt ||
+                  record.createdAt,
+                periodRange
+              )
+          );
+
+        // ------------------------------------------------------
+        // Only update state if this is still the newest request.
+        // ------------------------------------------------------
+
+        if (
+          !cancelled &&
+          !controller.signal.aborted &&
+          currentRequestId ===
+            requestIdRef.current
+        ) {
+          setSessions(finalSessions);
+          setAttendance(finalAttendance);
+        }
+      } catch (err) {
+        // Ignore AbortController cancellations.
+        if (
+          err?.name === "AbortError"
+        ) {
+          return;
+        }
+
+        if (
+          cancelled ||
+          currentRequestId !==
+            requestIdRef.current
+        ) {
+          return;
+        }
+
+        console.error(
+          "Attendance period fetch error:",
+          err
+        );
+
+        setSessions([]);
+        setAttendance([]);
+
+        setError(
+          err.message ||
+            "Failed to load attendance data."
+        );
+      } finally {
+        if (
+          !cancelled &&
+          currentRequestId ===
+            requestIdRef.current
+        ) {
+          setLoading(false);
+          setReportLoading(false);
+        }
+      }
+    };
+
+    loadPeriodData();
+
+    return () => {
+      cancelled = true;
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [
+    period,
+    fromDate,
+    toDate,
+    user?.id,
+  ]);
 
   // ==========================================================
-  // CLASS OPTIONS
+  // FRONTEND PERIOD RANGE
   // ==========================================================
-  const classOptions = ["Class A", "Class B", "Class C", "Class D", "Class E"];
+
+  function getFrontendPeriodRange(
+    selectedPeriod,
+    customFrom,
+    customTo
+  ) {
+    const now = new Date();
+
+    // Start of Monday this week.
+    const currentDay =
+      now.getDay();
+
+    const daysFromMonday =
+      currentDay === 0
+        ? 6
+        : currentDay - 1;
+
+    const thisWeekStart =
+      new Date(now);
+
+    thisWeekStart.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    thisWeekStart.setDate(
+      thisWeekStart.getDate() -
+        daysFromMonday
+    );
+
+    // End of Sunday this week.
+    const thisWeekEnd =
+      new Date(thisWeekStart);
+
+    thisWeekEnd.setDate(
+      thisWeekEnd.getDate() + 6
+    );
+
+    thisWeekEnd.setHours(
+      23,
+      59,
+      59,
+      999
+    );
+
+    // Last week.
+    const lastWeekStart =
+      new Date(thisWeekStart);
+
+    lastWeekStart.setDate(
+      lastWeekStart.getDate() - 7
+    );
+
+    const lastWeekEnd =
+      new Date(thisWeekStart);
+
+    lastWeekEnd.setMilliseconds(-1);
+
+    // ----------------------------------------------------------
+    // This Week
+    // ----------------------------------------------------------
+
+    if (
+      selectedPeriod ===
+      "thisWeek"
+    ) {
+      return {
+        start: thisWeekStart,
+        end: thisWeekEnd,
+      };
+    }
+
+    // ----------------------------------------------------------
+    // Last Week
+    // ----------------------------------------------------------
+
+    if (
+      selectedPeriod ===
+      "lastWeek"
+    ) {
+      return {
+        start: lastWeekStart,
+        end: lastWeekEnd,
+      };
+    }
+
+    // ----------------------------------------------------------
+    // Both Weeks
+    // ----------------------------------------------------------
+
+    if (
+      selectedPeriod ===
+      "bothWeeks"
+    ) {
+      return {
+        start: lastWeekStart,
+        end: thisWeekEnd,
+      };
+    }
+
+    // ----------------------------------------------------------
+    // Custom
+    // ----------------------------------------------------------
+
+    if (
+      selectedPeriod ===
+      "custom"
+    ) {
+      if (
+        !customFrom ||
+        !customTo
+      ) {
+        return null;
+      }
+
+      const start =
+        new Date(
+          `${customFrom}T00:00:00`
+        );
+
+      const end =
+        new Date(
+          `${customTo}T23:59:59.999`
+        );
+
+      if (
+        Number.isNaN(
+          start.getTime()
+        ) ||
+        Number.isNaN(
+          end.getTime()
+        )
+      ) {
+        return null;
+      }
+
+      return {
+        start,
+        end,
+      };
+    }
+
+    // ----------------------------------------------------------
+    // All Time
+    // ----------------------------------------------------------
+
+    return null;
+  }
+
+  // ==========================================================
+  // CHECK DATE AGAINST SELECTED PERIOD
+  // ==========================================================
+
+  function isDateInsideRange(
+    value,
+    range
+  ) {
+    // All Time
+    if (!range) {
+      return true;
+    }
+
+    if (!value) {
+      return false;
+    }
+
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return false;
+    }
+
+    return (
+      date >= range.start &&
+      date <= range.end
+    );
+  }
 
   // ==========================================================
   // FILTER SESSIONS
   // ==========================================================
-  const filteredSessions = useMemo(() => {
-    const searchValue = search.trim().toLowerCase();
 
-    return sessions.filter((session) => {
-      const courseName =
-        session.course?.courseName?.toLowerCase() || "";
+  const filteredSessions =
+    useMemo(() => {
+      const searchValue =
+        search
+          .trim()
+          .toLowerCase();
 
-      const courseCode =
-        session.course?.courseCode?.toLowerCase() || "";
+      return sessions.filter(
+        (session) => {
+          const courseName =
+            session.course?.courseName?.toLowerCase() ||
+            "";
 
-      const className =
-        session.className?.toLowerCase() || "";
+          const courseCode =
+            session.course?.courseCode?.toLowerCase() ||
+            "";
 
-      const status =
-        session.status?.toLowerCase() || "";
+          const className =
+            session.className?.toLowerCase() ||
+            "";
 
-      const matchesSearch =
-        !searchValue ||
-        courseName.includes(searchValue) ||
-        courseCode.includes(searchValue) ||
-        className.includes(searchValue) ||
-        status.includes(searchValue);
+          const status =
+            session.status?.toLowerCase() ||
+            "";
 
-      const matchesClass =
-        !selectedClass ||
-        session.className === selectedClass;
+          const matchesSearch =
+            !searchValue ||
+            courseName.includes(
+              searchValue
+            ) ||
+            courseCode.includes(
+              searchValue
+            ) ||
+            className.includes(
+              searchValue
+            ) ||
+            status.includes(
+              searchValue
+            );
 
-      const matchesStatus =
-        !selectedStatus ||
-        session.status === selectedStatus;
+          const matchesClass =
+            !selectedClass ||
+            session.className ===
+              selectedClass;
 
-      return (
-        matchesSearch &&
-        matchesClass &&
-        matchesStatus
+          const matchesStatus =
+            !selectedStatus ||
+            session.status ===
+              selectedStatus;
+
+          return (
+            matchesSearch &&
+            matchesClass &&
+            matchesStatus
+          );
+        }
       );
-    });
-  }, [
-    sessions,
-    search,
-    selectedClass,
-    selectedStatus,
-  ]);
+    }, [
+      sessions,
+      search,
+      selectedClass,
+      selectedStatus,
+    ]);
 
   // ==========================================================
-  // FILTER REPORT ATTENDANCE
+  // FILTER ATTENDANCE
   // ==========================================================
-  const filteredAttendance = useMemo(() => {
-    const searchValue = search.trim().toLowerCase();
 
-    return attendance.filter((record) => {
-      const studentName =
-        record.student?.name?.toLowerCase() || "";
+  const filteredAttendance =
+    useMemo(() => {
+      const searchValue =
+        search
+          .trim()
+          .toLowerCase();
 
-      const indexNumber =
-        record.student?.indexNumber?.toLowerCase() || "";
+      return attendance.filter(
+        (record) => {
+          const studentName =
+            record.student?.name?.toLowerCase() ||
+            "";
 
-      const courseName =
-        record.course?.courseName?.toLowerCase() || "";
+          const indexNumber =
+            record.student?.indexNumber?.toLowerCase() ||
+            "";
 
-      const courseCode =
-        record.course?.courseCode?.toLowerCase() || "";
+          const courseName =
+            record.course?.courseName?.toLowerCase() ||
+            "";
 
-      const className =
-        record.student?.className?.toLowerCase() ||
-        record.session?.className?.toLowerCase() ||
-        "";
+          const courseCode =
+            record.course?.courseCode?.toLowerCase() ||
+            "";
 
-      const matchesSearch =
-        !searchValue ||
-        studentName.includes(searchValue) ||
-        indexNumber.includes(searchValue) ||
-        courseName.includes(searchValue) ||
-        courseCode.includes(searchValue) ||
-        className.includes(searchValue);
+          const className =
+            record.student?.className?.toLowerCase() ||
+            record.session?.className?.toLowerCase() ||
+            "";
 
-      const matchesClass =
-        !selectedClass ||
-        record.student?.className === selectedClass ||
-        record.session?.className === selectedClass;
+          const matchesSearch =
+            !searchValue ||
+            studentName.includes(
+              searchValue
+            ) ||
+            indexNumber.includes(
+              searchValue
+            ) ||
+            courseName.includes(
+              searchValue
+            ) ||
+            courseCode.includes(
+              searchValue
+            ) ||
+            className.includes(
+              searchValue
+            );
 
-      const matchesStatus =
-        !selectedStatus ||
-        record.status === selectedStatus;
+          const matchesClass =
+            !selectedClass ||
+            record.student?.className ===
+              selectedClass ||
+            record.session?.className ===
+              selectedClass;
 
-      return (
-        matchesSearch &&
-        matchesClass &&
-        matchesStatus
+          const matchesStatus =
+            !selectedStatus ||
+            record.status ===
+              selectedStatus;
+
+          return (
+            matchesSearch &&
+            matchesClass &&
+            matchesStatus
+          );
+        }
       );
-    });
-  }, [
-    attendance,
-    search,
-    selectedClass,
-    selectedStatus,
-  ]);
+    }, [
+      attendance,
+      search,
+      selectedClass,
+      selectedStatus,
+    ]);
 
   // ==========================================================
   // SUMMARY
   // ==========================================================
-  const totalSessions = filteredSessions.length;
 
-  const totalStudentsRecorded = filteredSessions.reduce(
-    (total, session) =>
-      total + Number(session.studentCount || 0),
-    0
-  );
+  const totalSessions =
+    filteredSessions.length;
 
-  const activeSessions = filteredSessions.filter(
-    (session) => session.status === "active"
-  ).length;
+  const totalStudentsRecorded =
+    filteredSessions.reduce(
+      (total, session) =>
+        total +
+        Number(
+          session.totalStudents ??
+            session.studentCount ??
+            0
+        ),
+      0
+    );
 
-  const uniqueCourses = new Set(
-    filteredSessions
-      .map((session) => session.course?._id)
-      .filter(Boolean)
-  ).size;
+  const activeSessions =
+    filteredSessions.filter(
+      (session) =>
+        session.status ===
+        "active"
+    ).length;
+
+  const uniqueCourses =
+    new Set(
+      filteredSessions
+        .map(
+          (session) =>
+            session.course?._id
+        )
+        .filter(Boolean)
+    ).size;
 
   const totalReportRecords =
     filteredAttendance.length;
 
   const presentRecords =
     filteredAttendance.filter(
-      (record) => record.status === "Present"
+      (record) =>
+        record.status ===
+        "Present"
     ).length;
 
   // ==========================================================
   // CLEAR FILTERS
   // ==========================================================
+
   const clearFilters = () => {
     setSearch("");
     setSelectedClass("");
     setSelectedStatus("");
 
     setPeriod("thisWeek");
+
     setFromDate("");
     setToDate("");
+
+    setError("");
   };
 
   // ==========================================================
   // FORMAT DATE
   // ==========================================================
-  const formatDate = (dateValue) => {
+
+  const formatDate = (
+    dateValue
+  ) => {
     if (!dateValue) {
       return "—";
     }
 
-    const date = new Date(dateValue);
+    const date =
+      new Date(dateValue);
 
-    if (Number.isNaN(date.getTime())) {
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
       return "—";
     }
 
@@ -370,37 +859,54 @@ function AttendanceHistory() {
   // ==========================================================
   // FORMAT TIME
   // ==========================================================
-  const formatTime = (dateValue) => {
+
+  const formatTime = (
+    dateValue
+  ) => {
     if (!dateValue) {
       return "—";
     }
 
-    const date = new Date(dateValue);
+    const date =
+      new Date(dateValue);
 
-    if (Number.isNaN(date.getTime())) {
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
       return "—";
     }
 
-    return date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return date.toLocaleTimeString(
+      [],
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
   };
 
   // ==========================================================
   // EXPORT PDF
   // ==========================================================
+
   const exportPDF = () => {
-    if (!filteredAttendance.length) {
+    if (
+      !filteredAttendance.length
+    ) {
       alert(
         "There are no attendance records to download."
       );
+
       return;
     }
 
-    const doc = new jsPDF("landscape");
+    const doc =
+      new jsPDF("landscape");
 
     doc.setFontSize(18);
+
     doc.text(
       "Lecturer Attendance Report",
       14,
@@ -410,7 +916,9 @@ function AttendanceHistory() {
     doc.setFontSize(10);
 
     doc.text(
-      `Lecturer: ${user?.name || "Lecturer"}`,
+      `Lecturer: ${
+        user?.name || "Lecturer"
+      }`,
       14,
       22
     );
@@ -428,18 +936,41 @@ function AttendanceHistory() {
     );
 
     const tableData =
-      filteredAttendance.map((record) => [
-        record.student?.name || "—",
-        record.student?.indexNumber || "—",
-        record.student?.className ||
-          record.session?.className ||
-          "—",
-        record.course?.courseCode || "—",
-        record.course?.courseName || "—",
-        formatDate(record.scannedAt),
-        formatTime(record.scannedAt),
-        record.status || "—",
-      ]);
+      filteredAttendance.map(
+        (record) => [
+          record.student?.name ||
+            "—",
+
+          record.student
+            ?.indexNumber ||
+            "—",
+
+          record.student
+            ?.className ||
+            record.session
+              ?.className ||
+            "—",
+
+          record.course
+            ?.courseCode ||
+            "—",
+
+          record.course
+            ?.courseName ||
+            "—",
+
+          formatDate(
+            record.scannedAt
+          ),
+
+          formatTime(
+            record.scannedAt
+          ),
+
+          record.status ||
+            "—",
+        ]
+      );
 
     autoTable(doc, {
       startY: 41,
@@ -478,51 +1009,78 @@ function AttendanceHistory() {
   // ==========================================================
   // EXPORT EXCEL
   // ==========================================================
+
   const exportExcel = () => {
-    if (!filteredAttendance.length) {
+    if (
+      !filteredAttendance.length
+    ) {
       alert(
         "There are no attendance records to download."
       );
+
       return;
     }
 
     const rows =
-      filteredAttendance.map((record) => ({
-        Student:
-          record.student?.name || "—",
+      filteredAttendance.map(
+        (record) => ({
+          Student:
+            record.student
+              ?.name ||
+            "—",
 
-        "Index Number":
-          record.student?.indexNumber || "—",
+          "Index Number":
+            record.student
+              ?.indexNumber ||
+            "—",
 
-        Department:
-          record.student?.department || "—",
+          Department:
+            record.student
+              ?.department ||
+            "—",
 
-        Level:
-          record.student?.level || "—",
+          Level:
+            record.student
+              ?.level ||
+            "—",
 
-        Class:
-          record.student?.className ||
-          record.session?.className ||
-          "—",
+          Class:
+            record.student
+              ?.className ||
+            record.session
+              ?.className ||
+            "—",
 
-        "Course Code":
-          record.course?.courseCode || "—",
+          "Course Code":
+            record.course
+              ?.courseCode ||
+            "—",
 
-        Course:
-          record.course?.courseName || "—",
+          Course:
+            record.course
+              ?.courseName ||
+            "—",
 
-        Date:
-          formatDate(record.scannedAt),
+          Date:
+            formatDate(
+              record.scannedAt
+            ),
 
-        Time:
-          formatTime(record.scannedAt),
+          Time:
+            formatTime(
+              record.scannedAt
+            ),
 
-        Status:
-          record.status || "—",
-      }));
+          Status:
+            record.status ||
+            "—",
+        })
+      );
 
     const worksheet =
-      XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.json_to_sheet(
+        rows
+      );
 
     const workbook =
       XLSX.utils.book_new();
@@ -541,41 +1099,55 @@ function AttendanceHistory() {
     );
   };
 
+  // ==========================================================
+  // RENDER
+  // ==========================================================
+
   return (
     <div className="attendance-history-page">
 
       {/* ====================================================
           HEADER
       ==================================================== */}
+
       <div className="page-header">
         <div>
-          <h1>Attendance History</h1>
+          <h1>
+            Attendance History
+          </h1>
 
           <p>
-            View your attendance sessions and download
-            attendance reports by period.
+            View your attendance
+            sessions and download
+            attendance reports by
+            period.
           </p>
         </div>
       </div>
 
-
       {/* ====================================================
           PERIOD SELECTOR
       ==================================================== */}
+
       <div className="report-period-card">
 
         <div className="report-period-title">
+
           <FaCalendarAlt />
 
           <div>
-            <h3>Attendance Period</h3>
+            <h3>
+              Attendance Period
+            </h3>
 
             <p>
-              Select the period you want to view or download.
+              Select the period you
+              want to view or
+              download.
             </p>
           </div>
-        </div>
 
+        </div>
 
         <div className="period-options">
 
@@ -587,12 +1159,13 @@ function AttendanceHistory() {
                 : "period-button"
             }
             onClick={() =>
-              setPeriod("thisWeek")
+              setPeriod(
+                "thisWeek"
+              )
             }
           >
             This Week
           </button>
-
 
           <button
             type="button"
@@ -602,12 +1175,13 @@ function AttendanceHistory() {
                 : "period-button"
             }
             onClick={() =>
-              setPeriod("lastWeek")
+              setPeriod(
+                "lastWeek"
+              )
             }
           >
             Last Week
           </button>
-
 
           <button
             type="button"
@@ -617,12 +1191,13 @@ function AttendanceHistory() {
                 : "period-button"
             }
             onClick={() =>
-              setPeriod("bothWeeks")
+              setPeriod(
+                "bothWeeks"
+              )
             }
           >
             Both Weeks
           </button>
-
 
           <button
             type="button"
@@ -637,7 +1212,6 @@ function AttendanceHistory() {
           >
             All Time
           </button>
-
 
           <button
             type="button"
@@ -655,36 +1229,47 @@ function AttendanceHistory() {
 
         </div>
 
-
         {/* ==================================================
             CUSTOM PERIOD
         ================================================== */}
+
         {period === "custom" && (
           <div className="custom-period-fields">
 
             <div className="filter-group">
-              <label>From</label>
+
+              <label>
+                From
+              </label>
 
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) =>
-                  setFromDate(e.target.value)
+                  setFromDate(
+                    e.target.value
+                  )
                 }
               />
+
             </div>
 
-
             <div className="filter-group">
-              <label>To</label>
+
+              <label>
+                To
+              </label>
 
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) =>
-                  setToDate(e.target.value)
+                  setToDate(
+                    e.target.value
+                  )
                 }
               />
+
             </div>
 
           </div>
@@ -692,13 +1277,14 @@ function AttendanceHistory() {
 
       </div>
 
-
       {/* ====================================================
           FILTERS
       ==================================================== */}
+
       <div className="report-filter-card">
 
         <div className="report-search-box">
+
           <FaSearch />
 
           <input
@@ -706,45 +1292,54 @@ function AttendanceHistory() {
             placeholder="Search student, index number, course or class..."
             value={search}
             onChange={(e) =>
-              setSearch(e.target.value)
+              setSearch(
+                e.target.value
+              )
             }
           />
-        </div>
 
+        </div>
 
         <div className="report-filter-select">
 
           <select
             value={selectedClass}
             onChange={(e) =>
-              setSelectedClass(e.target.value)
+              setSelectedClass(
+                e.target.value
+              )
             }
           >
             <option value="">
               All Classes
             </option>
 
-            {classOptions.map((className) => (
-              <option
-                key={className}
-                value={className}
-              >
-                {className}
-              </option>
-            ))}
+            {classOptions.map(
+              (className) => (
+                <option
+                  key={className}
+                  value={className}
+                >
+                  {className}
+                </option>
+              )
+            )}
+
           </select>
 
         </div>
-
 
         <div className="report-filter-select">
 
           <select
             value={selectedStatus}
             onChange={(e) =>
-              setSelectedStatus(e.target.value)
+              setSelectedStatus(
+                e.target.value
+              )
             }
           >
+
             <option value="">
               All Status
             </option>
@@ -764,15 +1359,17 @@ function AttendanceHistory() {
             <option value="Absent">
               Absent
             </option>
+
           </select>
 
         </div>
 
-
         <button
           type="button"
           className="clear-filter-button"
-          onClick={clearFilters}
+          onClick={
+            clearFilters
+          }
         >
           <FaTimes />
           Clear
@@ -780,21 +1377,27 @@ function AttendanceHistory() {
 
       </div>
 
-
       {/* ====================================================
           DOWNLOAD
       ==================================================== */}
+
       <div className="report-download-card">
 
         <div>
-          <h3>Download Attendance Report</h3>
+
+          <h3>
+            Download Attendance
+            Report
+          </h3>
 
           <p>
             Current period:{" "}
-            <strong>{periodLabel}</strong>
+            <strong>
+              {periodLabel}
+            </strong>
           </p>
-        </div>
 
+        </div>
 
         <div className="report-download-buttons">
 
@@ -810,7 +1413,6 @@ function AttendanceHistory() {
             <FaFilePdf />
             Download PDF
           </button>
-
 
           <button
             type="button"
@@ -829,52 +1431,67 @@ function AttendanceHistory() {
 
       </div>
 
-
       {/* ====================================================
           ERROR
       ==================================================== */}
+
       {error && (
         <div className="report-error">
           {error}
         </div>
       )}
 
-
       {/* ====================================================
           SUMMARY
       ==================================================== */}
+
       <div className="report-summary-grid">
 
         <div className="report-summary-card">
-          <span>Sessions</span>
-          <strong>{totalSessions}</strong>
+          <span>
+            Sessions
+          </span>
+
+          <strong>
+            {totalSessions}
+          </strong>
         </div>
 
-
         <div className="report-summary-card">
-          <span>Courses</span>
-          <strong>{uniqueCourses}</strong>
+          <span>
+            Courses
+          </span>
+
+          <strong>
+            {uniqueCourses}
+          </strong>
         </div>
 
-
         <div className="report-summary-card">
-          <span>Students Recorded</span>
+          <span>
+            Students Recorded
+          </span>
+
           <strong>
             {totalStudentsRecorded}
           </strong>
         </div>
 
-
         <div className="report-summary-card">
-          <span>Report Records</span>
+          <span>
+            Report Records
+          </span>
+
           <strong>
             {totalReportRecords}
           </strong>
         </div>
 
-
         <div className="report-summary-card">
-          <span>Present</span>
+          <span>
+            Present
+          </span>
+
           <strong>
             {presentRecords}
           </strong>
@@ -882,41 +1499,60 @@ function AttendanceHistory() {
 
       </div>
 
-
       {/* ====================================================
           SESSION HISTORY
       ==================================================== */}
+
       <div className="attendance-history-card">
 
         <div className="attendance-history-header">
 
           <div>
-            <h3>Attendance Sessions</h3>
+
+            <h3>
+              Attendance Sessions
+            </h3>
 
             <p>
-              {filteredSessions.length} session
-              {filteredSessions.length !== 1
+              {filteredSessions.length}{" "}
+              session
+              {filteredSessions.length !==
+              1
                 ? "s"
                 : ""}
             </p>
+
           </div>
+
+          {loading && (
+            <div className="report-loading">
+              Loading {periodLabel.toLowerCase()}...
+            </div>
+          )}
 
         </div>
 
-
         {loading ? (
           <div className="report-loading">
-            Loading attendance sessions...
+            Fetching attendance data...
           </div>
-        ) : filteredSessions.length === 0 ? (
+        ) : filteredSessions.length ===
+          0 ? (
           <div className="report-empty">
 
             <FaCalendarAlt />
 
-            <h3>No Attendance Sessions</h3>
+            <h3>
+              No Attendance Sessions
+            </h3>
 
             <p>
-              No sessions match the selected filters.
+              No attendance sessions
+              were found for{" "}
+              <strong>
+                {periodLabel}
+              </strong>
+              .
             </p>
 
           </div>
@@ -926,23 +1562,48 @@ function AttendanceHistory() {
             <table className="attendance-history-table">
 
               <thead>
-                <tr>
-                  <th>Course</th>
-                  <th>Code</th>
-                  <th>Class</th>
-                  <th>Status</th>
-                  <th>Students</th>
-                  <th>Date & Time</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
 
+                <tr>
+                  <th>
+                    Course
+                  </th>
+
+                  <th>
+                    Code
+                  </th>
+
+                  <th>
+                    Class
+                  </th>
+
+                  <th>
+                    Status
+                  </th>
+
+                  <th>
+                    Students
+                  </th>
+
+                  <th>
+                    Date & Time
+                  </th>
+
+                  <th>
+                    Action
+                  </th>
+                </tr>
+
+              </thead>
 
               <tbody>
 
                 {filteredSessions.map(
                   (session) => (
-                    <tr key={session._id}>
+                    <tr
+                      key={
+                        session._id
+                      }
+                    >
 
                       <td>
                         {session.course
@@ -978,11 +1639,13 @@ function AttendanceHistory() {
                       </td>
 
                       <td>
-                        {session.studentCount ??
+                        {session.totalStudents ??
+                          session.studentCount ??
                           0}
                       </td>
 
                       <td>
+
                         {formatDate(
                           session.startTime
                         )}
@@ -994,6 +1657,7 @@ function AttendanceHistory() {
                             session.startTime
                           )}
                         </small>
+
                       </td>
 
                       <td>
@@ -1004,6 +1668,175 @@ function AttendanceHistory() {
                         >
                           View
                         </Link>
+
+                      </td>
+
+                    </tr>
+                  )
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+        )}
+
+      </div>
+
+      {/* ====================================================
+          ATTENDANCE REPORT
+      ==================================================== */}
+
+      <div className="attendance-history-card">
+
+        <div className="attendance-history-header">
+
+          <div>
+
+            <h3>
+              Attendance Report
+            </h3>
+
+            <p>
+              Attendance records for{" "}
+              <strong>
+                {periodLabel}
+              </strong>
+            </p>
+
+          </div>
+
+        </div>
+
+        {reportLoading ? (
+          <div className="report-loading">
+            Loading attendance report...
+          </div>
+        ) : filteredAttendance.length ===
+          0 ? (
+          <div className="report-empty">
+
+            <FaCalendarAlt />
+
+            <h3>
+              No Attendance Records
+            </h3>
+
+            <p>
+              No student attendance
+              records were found for{" "}
+              <strong>
+                {periodLabel}
+              </strong>
+              .
+            </p>
+
+          </div>
+        ) : (
+          <div className="attendance-history-table-wrapper">
+
+            <table className="attendance-history-table">
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    Student
+                  </th>
+
+                  <th>
+                    Index Number
+                  </th>
+
+                  <th>
+                    Class
+                  </th>
+
+                  <th>
+                    Course
+                  </th>
+
+                  <th>
+                    Date
+                  </th>
+
+                  <th>
+                    Time
+                  </th>
+
+                  <th>
+                    Status
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody>
+
+                {filteredAttendance.map(
+                  (record) => (
+                    <tr
+                      key={
+                        record._id
+                      }
+                    >
+
+                      <td>
+                        {record.student
+                          ?.name ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {record.student
+                          ?.indexNumber ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {record.student
+                          ?.className ||
+                          record.session
+                            ?.className ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {record.course
+                          ?.courseName ||
+                          record.course
+                            ?.courseCode ||
+                          "—"}
+                      </td>
+
+                      <td>
+                        {formatDate(
+                          record.scannedAt
+                        )}
+                      </td>
+
+                      <td>
+                        {formatTime(
+                          record.scannedAt
+                        )}
+                      </td>
+
+                      <td>
+
+                        <span
+                          className={
+                            record.status ===
+                            "Present"
+                              ? "status-badge active"
+                              : "status-badge closed"
+                          }
+                        >
+                          {record.status ||
+                            "—"}
+                        </span>
 
                       </td>
 
