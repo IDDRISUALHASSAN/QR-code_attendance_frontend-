@@ -10,79 +10,41 @@ import API_URL from "../../config/api";
 
 const ALLOWED_RADIUS = 3000000;
 
-// Persistent browser/device identifier
 const DEVICE_STORAGE_KEY = "attendanceDeviceId";
 
 // ============================================================
-// GET OR CREATE DEVICE ID
+// CREATE / GET DEVICE ID
 // ============================================================
-const getOrCreateDeviceId = () => {
-  try {
-    let deviceId = localStorage.getItem(
-      DEVICE_STORAGE_KEY
-    );
+const getDeviceId = () => {
+  let deviceId = localStorage.getItem(
+    DEVICE_STORAGE_KEY
+  );
 
-    // Existing device ID
-    if (
-      deviceId &&
-      typeof deviceId === "string" &&
-      deviceId.trim() !== ""
-    ) {
-      return deviceId.trim();
-    }
-
-    // Create new device ID
-    if (
-      window.crypto &&
-      typeof window.crypto.randomUUID === "function"
-    ) {
-      deviceId = window.crypto.randomUUID();
-    } else {
-      deviceId =
-        "device-" +
-        Date.now() +
-        "-" +
-        Math.random()
-          .toString(36)
-          .substring(2, 15);
-    }
-
-    // Store it
-    localStorage.setItem(
-      DEVICE_STORAGE_KEY,
-      deviceId
-    );
-
-    // Verify that it was actually stored
-    const savedDeviceId =
-      localStorage.getItem(
-        DEVICE_STORAGE_KEY
-      );
-
-    if (
-      savedDeviceId &&
-      savedDeviceId.trim() !== ""
-    ) {
-      return savedDeviceId.trim();
-    }
-
+  if (deviceId && deviceId.trim() !== "") {
     return deviceId;
-  } catch (error) {
-    console.error(
-      "Device ID creation error:",
-      error
-    );
+  }
 
-    // Fallback if localStorage is unavailable
-    return (
+  if (
+    window.crypto &&
+    typeof window.crypto.randomUUID === "function"
+  ) {
+    deviceId = window.crypto.randomUUID();
+  } else {
+    deviceId =
       "device-" +
       Date.now() +
       "-" +
       Math.random()
         .toString(36)
-        .substring(2, 15)
-    );
+        .substring(2, 15);
   }
+
+  localStorage.setItem(
+    DEVICE_STORAGE_KEY,
+    deviceId
+  );
+
+  return deviceId;
 };
 
 
@@ -90,51 +52,30 @@ const getOrCreateDeviceId = () => {
 // MAIN COMPONENT
 // ============================================================
 function ScanQR() {
-  const [scanning, setScanning] =
-    useState(false);
-
-  const [loading, setLoading] =
-    useState(false);
-
+  const [scanning, setScanning] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] =
     useState(false);
+  const [message, setMessage] = useState("");
 
-  const [message, setMessage] =
-    useState("");
-
-  const [location, setLocation] =
-    useState(null);
-
-  const [distance, setDistance] =
-    useState(null);
-
-  const scannerRef =
-    useRef(null);
-
-  const processingRef =
-    useRef(false);
-
-  // Keep the device ID in a ref so it is
-  // always available during scanning.
-  const deviceIdRef =
-    useRef(null);
+  const scannerRef = useRef(null);
+  const processingRef = useRef(false);
+  const deviceIdRef = useRef(null);
 
   const user = JSON.parse(
     localStorage.getItem("user")
   );
 
   // ==========================================================
-  // INITIALIZE DEVICE ID
+  // INITIALIZE DEVICE
   // ==========================================================
   useEffect(() => {
-    const deviceId =
-      getOrCreateDeviceId();
+    const deviceId = getDeviceId();
 
-    deviceIdRef.current =
-      deviceId;
+    deviceIdRef.current = deviceId;
 
     console.log(
-      "Attendance device initialized."
+      "Attendance device initialized"
     );
 
     return () => {
@@ -142,137 +83,117 @@ function ScanQR() {
     };
   }, []);
 
+
   // ==========================================================
-  // GET DEVICE ID
+  // GET CURRENT DEVICE ID
   // ==========================================================
-  const getDeviceId = () => {
-    // First use the current ref
+  const getCurrentDeviceId = () => {
     if (
       deviceIdRef.current &&
-      typeof deviceIdRef.current ===
-        "string" &&
       deviceIdRef.current.trim() !== ""
     ) {
-      return deviceIdRef.current.trim();
+      return deviceIdRef.current;
     }
 
-    // Otherwise create/retrieve it again
-    const deviceId =
-      getOrCreateDeviceId();
+    const deviceId = getDeviceId();
 
-    deviceIdRef.current =
-      deviceId;
+    deviceIdRef.current = deviceId;
 
     return deviceId;
   };
 
+
   // ==========================================================
   // CHECK LOCATION PERMISSION
   // ==========================================================
-  const checkLocationPermission =
-    async () => {
-      try {
-        if (!navigator.permissions) {
-          return "prompt";
-        }
-
-        const permission =
-          await navigator.permissions.query(
-            {
-              name: "geolocation",
-            }
-          );
-
-        return permission.state;
-      } catch (error) {
+  const checkLocationPermission = async () => {
+    try {
+      if (!navigator.permissions) {
         return "prompt";
       }
-    };
+
+      const permission =
+        await navigator.permissions.query({
+          name: "geolocation",
+        });
+
+      return permission.state;
+    } catch (error) {
+      return "prompt";
+    }
+  };
+
 
   // ==========================================================
-  // GET STUDENT CURRENT LOCATION
+  // GET STUDENT LOCATION
   // ==========================================================
   const getStudentLocation = () => {
-    return new Promise(
-      (resolve, reject) => {
-        if (!navigator.geolocation) {
-          reject(
-            new Error(
-              "Geolocation is not supported by this device."
-            )
-          );
-
-          return;
-        }
-
-        setGettingLocation(true);
-
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setGettingLocation(false);
-
-            const studentLocation = {
-              latitude:
-                position.coords.latitude,
-
-              longitude:
-                position.coords.longitude,
-
-              accuracy:
-                position.coords.accuracy,
-            };
-
-            setLocation(
-              studentLocation
-            );
-
-            resolve(
-              studentLocation
-            );
-          },
-
-          (error) => {
-            setGettingLocation(false);
-
-            let errorMessage =
-              "Unable to get your location.";
-
-            if (
-              error.code ===
-              error.PERMISSION_DENIED
-            ) {
-              errorMessage =
-                "Location permission is required to mark attendance.";
-            } else if (
-              error.code ===
-              error.POSITION_UNAVAILABLE
-            ) {
-              errorMessage =
-                "Your current location could not be determined.";
-            } else if (
-              error.code ===
-              error.TIMEOUT
-            ) {
-              errorMessage =
-                "Getting your location took too long. Please try again.";
-            }
-
-            reject(
-              new Error(
-                errorMessage
-              )
-            );
-          },
-
-          {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0,
-          }
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(
+          new Error(
+            "Geolocation is not supported by this device."
+          )
         );
+
+        return;
       }
-    );
+
+      setGettingLocation(true);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setGettingLocation(false);
+
+          resolve({
+            latitude:
+              position.coords.latitude,
+
+            longitude:
+              position.coords.longitude,
+
+            accuracy:
+              position.coords.accuracy,
+          });
+        },
+
+        (error) => {
+          setGettingLocation(false);
+
+          let message =
+            "Unable to get your location.";
+
+          if (
+            error.code ===
+            error.PERMISSION_DENIED
+          ) {
+            message =
+              "Location permission is required to mark attendance.";
+          } else if (
+            error.code ===
+            error.POSITION_UNAVAILABLE
+          ) {
+            message =
+              "Your current location could not be determined.";
+          } else if (
+            error.code === error.TIMEOUT
+          ) {
+            message =
+              "Getting your location took too long. Please try again.";
+          }
+
+          reject(new Error(message));
+        },
+
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        }
+      );
+    });
   };
+
 
   // ==========================================================
   // CALCULATE DISTANCE
@@ -283,18 +204,13 @@ function ScanQR() {
     lecturerLatitude,
     lecturerLongitude
   ) => {
-    const earthRadius =
-      6371000;
+    const earthRadius = 6371000;
 
     const lat1 =
-      (studentLatitude *
-        Math.PI) /
-      180;
+      (studentLatitude * Math.PI) / 180;
 
     const lat2 =
-      (lecturerLatitude *
-        Math.PI) /
-      180;
+      (lecturerLatitude * Math.PI) / 180;
 
     const deltaLatitude =
       ((lecturerLatitude -
@@ -309,16 +225,10 @@ function ScanQR() {
       180;
 
     const a =
-      Math.sin(
-        deltaLatitude / 2
-      ) **
-        2 +
+      Math.sin(deltaLatitude / 2) ** 2 +
       Math.cos(lat1) *
         Math.cos(lat2) *
-        Math.sin(
-          deltaLongitude / 2
-        ) **
-          2;
+        Math.sin(deltaLongitude / 2) ** 2;
 
     const c =
       2 *
@@ -327,47 +237,44 @@ function ScanQR() {
         Math.sqrt(1 - a)
       );
 
-    return (
-      earthRadius * c
-    );
+    return earthRadius * c;
   };
+
 
   // ==========================================================
   // GET ATTENDANCE SESSION
   // ==========================================================
-  const getAttendanceSession =
-    async (qrToken) => {
-      const token =
-        localStorage.getItem(
-          "token"
-        );
+  const getAttendanceSession = async (
+    qrToken
+  ) => {
+    const token =
+      localStorage.getItem("token");
 
-      const response =
-        await fetch(
-          `${API_URL}/api/attendance-sessions/token/${qrToken}`,
-          {
-            method: "GET",
+    const response = await fetch(
+      `${API_URL}/api/attendance-sessions/token/${qrToken}`,
+      {
+        method: "GET",
 
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type":
-                "application/json",
-            },
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Unable to find attendance session."
-        );
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type":
+            "application/json",
+        },
       }
+    );
 
-      return data;
-    };
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Unable to find attendance session."
+      );
+    }
+
+    return data;
+  };
+
 
   // ==========================================================
   // RECORD ATTENDANCE
@@ -378,23 +285,16 @@ function ScanQR() {
     calculatedDistance
   ) => {
     const token =
-      localStorage.getItem(
-        "token"
-      );
+      localStorage.getItem("token");
 
-    // --------------------------------------------------------
     // Get persistent device ID
-    // --------------------------------------------------------
     const scanDeviceId =
-      getDeviceId();
+      getCurrentDeviceId();
 
-    // --------------------------------------------------------
-    // Make absolutely sure we have a device ID
-    // --------------------------------------------------------
+    // Safety check
     if (
       !scanDeviceId ||
-      typeof scanDeviceId !==
-        "string" ||
+      typeof scanDeviceId !== "string" ||
       scanDeviceId.trim() === ""
     ) {
       throw new Error(
@@ -402,58 +302,48 @@ function ScanQR() {
       );
     }
 
-    console.log(
-      "Attendance scan device ready."
+    // Make sure student exists
+    if (!user?.id) {
+      throw new Error(
+        "Student information could not be found. Please log in again."
+      );
+    }
+
+    const response = await fetch(
+      `${API_URL}/api/attendance/scan`,
+      {
+        method: "POST",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          qrToken,
+
+          studentId: user.id,
+
+          latitude:
+            studentLocation.latitude,
+
+          longitude:
+            studentLocation.longitude,
+
+          accuracy:
+            studentLocation.accuracy,
+
+          distanceFromLecturer:
+            calculatedDistance,
+
+          scanDeviceId:
+            scanDeviceId.trim(),
+        }),
+      }
     );
 
-    // --------------------------------------------------------
-    // Prepare attendance request
-    // --------------------------------------------------------
-    const requestBody = {
-      qrToken,
-
-      studentId:
-        user?.id,
-
-      latitude:
-        studentLocation.latitude,
-
-      longitude:
-        studentLocation.longitude,
-
-      accuracy:
-        studentLocation.accuracy,
-
-      distanceFromLecturer:
-        calculatedDistance,
-
-      scanDeviceId:
-        scanDeviceId.trim(),
-    };
-
-    // --------------------------------------------------------
-    // Send attendance request
-    // --------------------------------------------------------
-    const response =
-      await fetch(
-        `${API_URL}/api/attendance/scan`,
-        {
-          method: "POST",
-
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify(
-            requestBody
-          ),
-        }
-      );
-
-    const data =
-      await response.json();
+    const data = await response.json();
 
     if (!response.ok) {
       throw new Error(
@@ -465,32 +355,41 @@ function ScanQR() {
     return data;
   };
 
+
   // ==========================================================
-  // STOP QR SCANNER
+  // STOP SCANNER
   // ==========================================================
   const stopScanner = async () => {
     try {
       if (scannerRef.current) {
-        const scannerState =
-          scannerRef.current.getState();
+        const scanner =
+          scannerRef.current;
 
-        if (
-          scannerState === 2
-        ) {
-          await scannerRef.current.stop();
-        }
+        scannerRef.current = null;
 
         try {
-          scannerRef.current.clear();
-        } catch (clearError) {
-          console.error(
-            "Scanner clear error:",
-            clearError
+          const state =
+            scanner.getState();
+
+          // Html5Qrcode scanning state = 2
+          if (state === 2) {
+            await scanner.stop();
+          }
+        } catch (error) {
+          console.log(
+            "Scanner stop:",
+            error
           );
         }
 
-        scannerRef.current =
-          null;
+        try {
+          scanner.clear();
+        } catch (error) {
+          console.log(
+            "Scanner clear:",
+            error
+          );
+        }
       }
     } catch (error) {
       console.error(
@@ -502,70 +401,56 @@ function ScanQR() {
     setScanning(false);
   };
 
+
   // ==========================================================
   // HANDLE QR SCAN
   // ==========================================================
   const handleScan = async (
     decodedText
   ) => {
-    if (
-      processingRef.current
-    ) {
+    if (processingRef.current) {
       return;
     }
 
-    processingRef.current =
-      true;
+    processingRef.current = true;
 
     try {
       setMessage("");
-
       setLoading(true);
 
-      // ------------------------------------------------------
-      // Make sure device ID exists BEFORE doing anything else
-      // ------------------------------------------------------
+      // Make sure device exists
       const deviceId =
-        getDeviceId();
+        getCurrentDeviceId();
 
       if (
         !deviceId ||
         deviceId.trim() === ""
       ) {
         throw new Error(
-          "Scanning device could not be identified. Please refresh the page and try again."
+          "Scanning device could not be identified."
         );
       }
 
-      // ------------------------------------------------------
-      // Stop camera after QR is detected
-      // ------------------------------------------------------
+      // Stop scanner
       await stopScanner();
 
-      // ------------------------------------------------------
-      // Check location permission
-      // ------------------------------------------------------
+      // Check GPS permission
       const permissionState =
         await checkLocationPermission();
 
       if (
-        permissionState ===
-        "denied"
+        permissionState === "denied"
       ) {
         throw new Error(
           "Location permission is blocked. Please enable location access in your browser settings."
         );
       }
 
-      // ------------------------------------------------------
       // Get student location
-      // ------------------------------------------------------
       const studentLocation =
         await getStudentLocation();
 
-      // ------------------------------------------------------
       // Get attendance session
-      // ------------------------------------------------------
       const session =
         await getAttendanceSession(
           decodedText
@@ -594,9 +479,7 @@ function ScanQR() {
         );
       }
 
-      // ------------------------------------------------------
       // Calculate distance
-      // ------------------------------------------------------
       const calculatedDistance =
         calculateDistance(
           studentLocation.latitude,
@@ -605,13 +488,7 @@ function ScanQR() {
           lecturerLongitude
         );
 
-      setDistance(
-        calculatedDistance
-      );
-
-      // ------------------------------------------------------
-      // Check allowed radius
-      // ------------------------------------------------------
+      // Check radius
       if (
         calculatedDistance >
         ALLOWED_RADIUS
@@ -621,9 +498,7 @@ function ScanQR() {
         );
       }
 
-      // ------------------------------------------------------
       // Record attendance
-      // ------------------------------------------------------
       const result =
         await recordAttendance(
           decodedText,
@@ -647,31 +522,22 @@ function ScanQR() {
       );
     } finally {
       setLoading(false);
-
-      processingRef.current =
-        false;
+      processingRef.current = false;
     }
   };
 
+
   // ==========================================================
-  // START QR SCANNER
+  // START SCANNER
   // ==========================================================
   const startScanner = async () => {
     try {
       setMessage("");
+      processingRef.current = false;
 
-      setLocation(null);
-
-      setDistance(null);
-
-      processingRef.current =
-        false;
-
-      // ------------------------------------------------------
-      // Make sure device ID exists before scanner starts
-      // ------------------------------------------------------
+      // Make sure device exists
       const deviceId =
-        getDeviceId();
+        getCurrentDeviceId();
 
       if (
         !deviceId ||
@@ -680,6 +546,11 @@ function ScanQR() {
         throw new Error(
           "Scanning device could not be identified."
         );
+      }
+
+      // Make sure old scanner is gone
+      if (scannerRef.current) {
+        await stopScanner();
       }
 
       const scanner =
@@ -706,13 +577,11 @@ function ScanQR() {
         },
 
         (decodedText) => {
-          handleScan(
-            decodedText
-          );
+          handleScan(decodedText);
         },
 
         () => {
-          // Ignore normal QR scanning errors.
+          // Ignore normal scanner errors
         }
       );
 
@@ -723,8 +592,7 @@ function ScanQR() {
         error
       );
 
-      scannerRef.current =
-        null;
+      scannerRef.current = null;
 
       setScanning(false);
 
@@ -735,28 +603,32 @@ function ScanQR() {
     }
   };
 
+
   // ==========================================================
-  // CLEANUP SCANNER
+  // CLEANUP
   // ==========================================================
   useEffect(() => {
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current
+      const scanner =
+        scannerRef.current;
+
+      if (scanner) {
+        scannerRef.current = null;
+
+        scanner
           .stop()
           .catch(() => {})
           .finally(() => {
             try {
-              scannerRef.current?.clear();
+              scanner.clear();
             } catch (error) {
               // Ignore cleanup errors
             }
-
-            scannerRef.current =
-              null;
           });
       }
     };
   }, []);
+
 
   // ==========================================================
   // UI
@@ -783,15 +655,18 @@ function ScanQR() {
           </div>
         </div>
 
-        {/* Scanner Card */}
+
+        {/* Main Card */}
         <div className="scan-qr-card">
 
+          {/* Scanner */}
           <div className="scanner-wrapper">
             <div
               id="qr-reader"
               className="qr-reader"
             ></div>
           </div>
+
 
           {/* Controls */}
           <div className="scanner-controls">
@@ -803,16 +678,13 @@ function ScanQR() {
                   startScanner
                 }
                 disabled={
-                  loading ||
-                  gettingLocation
+                  loading
                 }
               >
                 <FaQrcode />
 
                 {loading
                   ? "Processing..."
-                  : gettingLocation
-                  ? "Getting Location..."
                   : "Start QR Scanner"}
               </button>
             ) : (
@@ -831,7 +703,8 @@ function ScanQR() {
             )}
           </div>
 
-          {/* Processing status */}
+
+          {/* Loading */}
           {loading && (
             <div className="scan-status loading-status">
               <FaLocationArrow />
@@ -842,7 +715,8 @@ function ScanQR() {
             </div>
           )}
 
-          {/* Location status */}
+
+          {/* Location */}
           {gettingLocation && (
             <div className="scan-status location-status">
               <FaLocationArrow />
@@ -854,24 +728,21 @@ function ScanQR() {
             </div>
           )}
 
+
           {/* Message */}
           {message && (
             <div
               className={`scan-message ${
                 message
                   .toLowerCase()
-                  .includes(
-                    "success"
-                  )
-                  ? "success-message"
-                  : "error-message"
+                  .includes("success")
+                  ? "success"
+                  : "error"
               }`}
             >
               {message
                 .toLowerCase()
-                .includes(
-                  "success"
-                ) && (
+                .includes("success") && (
                 <FaCheckCircle />
               )}
 
@@ -881,31 +752,74 @@ function ScanQR() {
             </div>
           )}
 
-          {/* Success information */}
-          {message &&
-            message
-              .toLowerCase()
-              .includes(
-                "success"
-              ) && (
-              <div className="attendance-success">
-                <FaCheckCircle />
 
-                <div>
-                  <strong>
-                    Attendance Marked
-                  </strong>
+          {/* Success */}
+          {message
+            .toLowerCase()
+            .includes("success") && (
+            <div className="attendance-success">
+              <FaCheckCircle />
 
-                  <p>
-                    Your attendance
-                    has been
-                    successfully
-                    recorded for
-                    this session.
-                  </p>
-                </div>
+              <div>
+                <strong>
+                  Attendance Marked
+                </strong>
+
+                <p>
+                  Your attendance has
+                  been successfully
+                  recorded for this
+                  session.
+                </p>
               </div>
-            )}
+            </div>
+          )}
+
+
+          {/* Instructions */}
+          <div className="scan-instructions">
+            <h3>
+              How to mark attendance
+            </h3>
+
+            <div className="instruction-item">
+              <span>1</span>
+
+              <p>
+                Click "Start QR Scanner"
+                and allow camera access.
+              </p>
+            </div>
+
+            <div className="instruction-item">
+              <span>2</span>
+
+              <p>
+                Point your camera at the
+                lecturer's attendance QR
+                code.
+              </p>
+            </div>
+
+            <div className="instruction-item">
+              <span>3</span>
+
+              <p>
+                Allow location access when
+                requested.
+              </p>
+            </div>
+
+            <div className="instruction-item">
+              <span>4</span>
+
+              <p>
+                Wait for the system to
+                confirm your attendance.
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
